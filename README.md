@@ -142,4 +142,3 @@ L'interface est entièrement responsive et fonctionne sur :
 ## 📄 Licence
 
 Ce projet a été développé pour Al Shifa Clinic.
-
