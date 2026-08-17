@@ -5,6 +5,14 @@ import { PatientProfile } from '../components/PatientProfile';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { LoadingState } from '../components/LoadingState';
+import {
+  ModalShell,
+  FormField,
+  ModalInput,
+  ModalTextarea,
+  CancelButton,
+  SubmitButton,
+} from '../components/ModalShell';
 import { 
   Syringe, 
   CheckCircle, 
@@ -13,7 +21,6 @@ import {
   Activity,
   Eye,
   RefreshCw,
-  X
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { usePatients } from '../hooks/usePatients';
@@ -364,82 +371,74 @@ export function NurseDashboard() {
 
       {/* Modal Prise de Constantes */}
       {showVitalsForm && selectedPatientForVitals && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
-            <div className="bg-gradient-to-r from-teal-900 to-cyan-900 text-white p-5 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <Activity className="w-6 h-6 text-cyan-200" />
-                <div>
-                  <h2 className="font-bold text-lg">Prise de Constantes</h2>
-                  <p className="text-xs text-cyan-200">{selectedPatientForVitals.first_name} {selectedPatientForVitals.last_name || selectedPatientForVitals.name}</p>
-                </div>
-              </div>
-              <button onClick={() => setShowVitalsForm(false)} className="p-1 text-white hover:bg-white/10 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
+        <ModalShell
+          icon={<Activity className="w-6 h-6 text-teal-200" />}
+          title="Saisie des Constantes & Soins"
+          subtitle={`Patient : ${selectedPatientForVitals.first_name} ${selectedPatientForVitals.last_name || selectedPatientForVitals.name}`}
+          color="teal"
+          maxWidth="lg"
+          onClose={() => setShowVitalsForm(false)}
+          footer={
+            <>
+              <CancelButton onClick={() => setShowVitalsForm(false)} />
+              <SubmitButton color="teal">
+                Enregistrer dans le Dossier
+              </SubmitButton>
+            </>
+          }
+        >
+          <form onSubmit={handleSaveVitals} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3.5">
+              <FormField label="Tension Artérielle (TA)">
+                <ModalInput
+                  accent="teal"
+                  placeholder="Ex: 12/8"
+                  value={vitalsForm.tension}
+                  onChange={e => setVitalsForm({ ...vitalsForm, tension: e.target.value })}
+                />
+              </FormField>
+              <FormField label="Température (°C)">
+                <ModalInput
+                  accent="teal"
+                  type="number"
+                  step="0.1"
+                  placeholder="Ex: 37.2"
+                  value={vitalsForm.temp}
+                  onChange={e => setVitalsForm({ ...vitalsForm, temp: e.target.value })}
+                />
+              </FormField>
+              <FormField label="Pouls (bpm)">
+                <ModalInput
+                  accent="teal"
+                  type="number"
+                  placeholder="Ex: 75"
+                  value={vitalsForm.pouls}
+                  onChange={e => setVitalsForm({ ...vitalsForm, pouls: e.target.value })}
+                />
+              </FormField>
+              <FormField label="Poids (kg)">
+                <ModalInput
+                  accent="teal"
+                  type="number"
+                  step="0.5"
+                  placeholder="Ex: 70"
+                  value={vitalsForm.poids}
+                  onChange={e => setVitalsForm({ ...vitalsForm, poids: e.target.value })}
+                />
+              </FormField>
             </div>
 
-            <form onSubmit={handleSaveVitals} className="p-6 space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-medium text-slate-700 block mb-1">Tension Artérielle (TA)</label>
-                  <input
-                    placeholder="Ex: 12/8"
-                    className="w-full px-3 py-2 border rounded-xl outline-none"
-                    value={vitalsForm.tension}
-                    onChange={e => setVitalsForm({ ...vitalsForm, tension: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="font-medium text-slate-700 block mb-1">Température (°C)</label>
-                  <input
-                    type="number" step="0.1"
-                    placeholder="Ex: 37.2"
-                    className="w-full px-3 py-2 border rounded-xl outline-none"
-                    value={vitalsForm.temp}
-                    onChange={e => setVitalsForm({ ...vitalsForm, temp: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="font-medium text-slate-700 block mb-1">Pouls (bpm)</label>
-                  <input
-                    type="number"
-                    placeholder="Ex: 75"
-                    className="w-full px-3 py-2 border rounded-xl outline-none"
-                    value={vitalsForm.pouls}
-                    onChange={e => setVitalsForm({ ...vitalsForm, pouls: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="font-medium text-slate-700 block mb-1">Poids (kg)</label>
-                  <input
-                    type="number" step="0.5"
-                    placeholder="Ex: 70"
-                    className="w-full px-3 py-2 border rounded-xl outline-none"
-                    value={vitalsForm.poids}
-                    onChange={e => setVitalsForm({ ...vitalsForm, poids: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-medium text-slate-700 block mb-1">Observations / Soins Réalisés</label>
-                <textarea
-                  rows={2}
-                  placeholder="Injections, pansements, remarques..."
-                  className="w-full px-3 py-2 border rounded-xl outline-none"
-                  value={vitalsForm.soins}
-                  onChange={e => setVitalsForm({ ...vitalsForm, soins: e.target.value })}
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t">
-                <Button type="button" variant="ghost" onClick={() => setShowVitalsForm(false)}>Annuler</Button>
-                <Button type="submit" className="bg-cyan-600 hover:bg-cyan-700">Enregistrer dans le Dossier</Button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <FormField label="Observations / Soins Réalisés" hint="Pansements, injections, remarques infirmières...">
+              <ModalTextarea
+                accent="teal"
+                rows={3}
+                placeholder="Injections administrées, soin de plaie, état général..."
+                value={vitalsForm.soins}
+                onChange={e => setVitalsForm({ ...vitalsForm, soins: e.target.value })}
+              />
+            </FormField>
+          </form>
+        </ModalShell>
       )}
 
       {/* Patient Profile Modal */}

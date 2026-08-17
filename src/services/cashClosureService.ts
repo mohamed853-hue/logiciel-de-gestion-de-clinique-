@@ -328,11 +328,11 @@ export function formatClosureStatus(status: string): string {
  */
 export function formatVariance(variance: number): string {
   if (variance > 0) {
-    return `+${variance.toFixed(2)} DH (excédent)`;
+    return `+${variance.toFixed(2)} FCFA (excédent)`;
   } else if (variance < 0) {
-    return `${variance.toFixed(2)} DH (manquant)`;
+    return `${variance.toFixed(2)} FCFA (manquant)`;
   }
-  return '0.00 DH (équilibré)';
+  return '0.00 FCFA (équilibré)';
 }
 
 /**

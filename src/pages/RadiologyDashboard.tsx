@@ -5,6 +5,13 @@ import { EmptyState } from '../components/EmptyState';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
 import {
+  ModalShell,
+  FormField,
+  ModalTextarea,
+  CancelButton,
+  SubmitButton,
+} from '../components/ModalShell';
+import {
   Activity,
   Clock,
   CheckCircle,
@@ -13,7 +20,6 @@ import {
   RefreshCw,
   Image as ImageIcon,
   FileText,
-  X,
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { supabase } from '../services/supabase';
@@ -395,42 +401,50 @@ export function RadiologyDashboard() {
 
       {/* Modal résultat */}
       {resultModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-5 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <ImageIcon className="w-6 h-6 text-white/80" />
-                <h2 className="font-bold text-lg">Saisir le Résultat</h2>
-              </div>
-              <button onClick={() => setResultModal(null)} className="p-1 text-white hover:bg-white/10 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleSaveResult} className="p-6 space-y-4">
-              <div className="bg-slate-50 rounded-xl p-3 text-sm">
-                <p className="font-bold text-slate-800">{resultModal.patient_name}</p>
-                <p className="text-slate-500">{resultModal.exam_type}</p>
-              </div>
+        <ModalShell
+          icon={<ImageIcon className="w-6 h-6 text-indigo-200" />}
+          title="Saisie de Compte-Rendu d'Imagerie"
+          subtitle={`Examen : ${resultModal.exam_type}`}
+          color="indigo"
+          maxWidth="lg"
+          onClose={() => setResultModal(null)}
+          footer={
+            <>
+              <CancelButton onClick={() => setResultModal(null)} />
+              <SubmitButton
+                loading={saving}
+                loadingText="Enregistrement..."
+                color="indigo"
+                disabled={!resultText.trim()}
+              >
+                Valider le Compte-Rendu
+              </SubmitButton>
+            </>
+          }
+        >
+          <form onSubmit={handleSaveResult} className="space-y-4">
+            <div className="bg-indigo-50/70 rounded-2xl p-4 border border-indigo-100 flex items-center justify-between">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Résultat / Rapport</label>
-                <textarea
-                  required
-                  rows={5}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                  placeholder="Saisir les observations et résultats de l'imagerie..."
-                  value={resultText}
-                  onChange={e => setResultText(e.target.value)}
-                />
+                <p className="font-extrabold text-slate-800 text-sm">{resultModal.patient_name}</p>
+                <p className="text-xs text-indigo-700 font-semibold mt-0.5">{resultModal.exam_type}</p>
               </div>
-              <div className="flex justify-end gap-3 pt-2 border-t">
-                <Button type="button" variant="ghost" onClick={() => setResultModal(null)}>Annuler</Button>
-                <Button type="submit" disabled={saving} className="bg-indigo-600 hover:bg-indigo-700">
-                  {saving ? 'Enregistrement...' : 'Valider le Résultat'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
+              <span className="px-2.5 py-1 bg-indigo-100 text-indigo-800 rounded-lg text-xs font-bold">
+                Radiologie
+              </span>
+            </div>
+
+            <FormField label="Résultats & Observations Réalisées" required hint="Saisissez les conclusions de l'examen d'imagerie.">
+              <ModalTextarea
+                accent="purple"
+                required
+                rows={6}
+                placeholder="Description détaillée des images, anomalies observées, conclusion du radiologue..."
+                value={resultText}
+                onChange={e => setResultText(e.target.value)}
+              />
+            </FormField>
+          </form>
+        </ModalShell>
       )}
     </div>
   );

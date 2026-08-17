@@ -9,7 +9,7 @@ interface CardProps {
 
 export function Card({ children, className, onClick }: CardProps) {
   return (
-    <div onClick={onClick} className={cn('glass rounded-2xl shadow-xl overflow-hidden', className)}>
+    <div onClick={onClick} className={cn('bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden', className)}>
       {children}
     </div>
   );
@@ -17,7 +17,7 @@ export function Card({ children, className, onClick }: CardProps) {
 
 export function CardHeader({ children, className }: CardProps) {
   return (
-    <div className={cn('p-6 border-b border-slate-200/50 bg-gradient-to-r from-white to-slate-50', className)}>
+    <div className={cn('p-6 border-b border-slate-200/70 bg-gradient-to-r from-white to-slate-50/80', className)}>
       {children}
     </div>
   );

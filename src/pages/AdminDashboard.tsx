@@ -10,17 +10,26 @@ import {
   Activity, 
   TrendingUp, 
   Search, 
-  Plus, 
   Settings, 
   BarChart3,
   RefreshCw,
   UserCheck,
   CheckCircle,
-  X
+  Calendar,
+  UserPlus
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { supabase } from '../services/supabase';
 import type { UserRole } from '../types';
+import {
+  ModalShell,
+  FormField,
+  ModalInput,
+  ModalSelect,
+  CancelButton,
+  SubmitButton,
+} from '../components/ModalShell';
+import { AppointmentModal } from '../components/AppointmentModal';
 
 interface AppUser {
   id: string;
@@ -42,8 +51,9 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modal nouvel utilisateur
+  // Modal nouvel utilisateur & RDV
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -129,36 +139,6 @@ export function AdminDashboard() {
   const activeCount = usersList.filter(u => u.status === 'actif').length;
   const inactiveCount = usersList.filter(u => u.status !== 'actif').length;
 
-  const stats = [
-    {
-      title: 'Comptes Utilisateurs',
-      value: usersList.length.toString(),
-      sub: `${activeCount} actifs · ${inactiveCount} inactifs`,
-      icon: <Users className="w-6 h-6" />,
-      color: 'from-blue-500 to-cyan-500',
-    },
-    {
-      title: 'Utilisateurs Actifs',
-      value: activeCount.toString(),
-      sub: 'En service actuellement',
-      icon: <UserCheck className="w-6 h-6" />,
-      color: 'from-emerald-500 to-teal-500',
-    },
-    {
-      title: 'Dossiers Patients',
-      value: totalPatients.toString(),
-      sub: 'Enregistrés dans le système',
-      icon: <Activity className="w-6 h-6" />,
-      color: 'from-purple-500 to-pink-500',
-    },
-    {
-      title: 'Services Déployés',
-      value: '8',
-      sub: 'Modules actifs',
-      icon: <Shield className="w-6 h-6" />,
-      color: 'from-slate-700 to-slate-900',
-    },
-  ];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -181,27 +161,66 @@ export function AdminDashboard() {
             <RefreshCw className="w-4 h-4 mr-2" />
             Actualiser
           </Button>
-          <Button onClick={() => setShowUserModal(true)} className="bg-slate-900 hover:bg-slate-800">
-            <Plus className="w-4 h-4 mr-2" />
-            Créer un Utilisateur
+          <Button onClick={() => setShowAppointmentModal(true)} className="bg-purple-600 hover:bg-purple-700 text-white font-bold">
+            <Calendar className="w-4 h-4 mr-2" />
+            Planifier RDV
+          </Button>
+          <Button onClick={() => setShowUserModal(true)} className="bg-slate-900 hover:bg-slate-800 text-white">
+            <UserPlus className="w-4 h-4 mr-2" />
+            Nouvel Utilisateur
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards avec Dégradés Riches et Contraste Élevé */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        {stats.map((stat) => (
-          <Card key={stat.title} className="stat-card-motion border-0 shadow-sm cursor-pointer">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500">{stat.title}</p>
-                  <p className="text-3xl font-bold text-slate-800 mt-1">{stat.value}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{stat.sub}</p>
-                </div>
-                <div className={cn('w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center text-white shadow-md', stat.color)}>
-                  {stat.icon}
-                </div>
+        {[
+          {
+            title: 'Comptes Utilisateurs',
+            value: usersList.length.toString(),
+            sub: `${activeCount} actifs · ${inactiveCount} inactifs`,
+            icon: <Users className="w-6 h-6" />,
+            gradient: 'from-blue-600 via-blue-700 to-indigo-800',
+            textColor: 'text-blue-100',
+            subColor: 'text-blue-200/90',
+          },
+          {
+            title: 'Utilisateurs Actifs',
+            value: activeCount.toString(),
+            sub: 'En service actuellement',
+            icon: <UserCheck className="w-6 h-6" />,
+            gradient: 'from-emerald-600 via-teal-700 to-cyan-800',
+            textColor: 'text-emerald-100',
+            subColor: 'text-emerald-200/90',
+          },
+          {
+            title: 'Dossiers Patients',
+            value: totalPatients.toString(),
+            sub: 'Enregistrés dans le système',
+            icon: <Activity className="w-6 h-6" />,
+            gradient: 'from-purple-600 via-purple-700 to-violet-800',
+            textColor: 'text-purple-100',
+            subColor: 'text-purple-200/90',
+          },
+          {
+            title: 'Services Déployés',
+            value: '8',
+            sub: 'Modules actifs de la clinique',
+            icon: <Shield className="w-6 h-6" />,
+            gradient: 'from-slate-800 via-slate-900 to-black',
+            textColor: 'text-slate-200',
+            subColor: 'text-slate-300/90',
+          },
+        ].map((stat) => (
+          <Card key={stat.title} className={cn('stat-card-motion border-0 shadow-lg bg-gradient-to-br text-white cursor-pointer hover:scale-[1.02] transition-all', stat.gradient)}>
+            <CardContent className="p-5 flex items-center justify-between">
+              <div>
+                <p className={cn('text-xs font-bold uppercase tracking-wider', stat.textColor)}>{stat.title}</p>
+                <p className="text-3xl font-black text-white mt-1.5 tracking-tight">{stat.value}</p>
+                <p className={cn('text-[11px] mt-2 font-semibold', stat.subColor)}>{stat.sub}</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center text-white border border-white/20 shadow-inner">
+                {stat.icon}
               </div>
             </CardContent>
           </Card>
@@ -408,93 +427,90 @@ export function AdminDashboard() {
 
       {/* Modal Créer Utilisateur */}
       {showUserModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
-            <div className="bg-slate-900 text-white p-5 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <Users className="w-6 h-6 text-slate-300" />
-                <h2 className="font-bold text-lg">Créer un Compte Utilisateur</h2>
-              </div>
-              <button onClick={() => setShowUserModal(false)} className="p-1 text-white hover:bg-white/10 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
+        <ModalShell
+          icon={<UserPlus className="w-6 h-6 text-slate-200" />}
+          title="Créer un Compte Utilisateur"
+          subtitle="Accès immédiat et rôle attribué"
+          color="indigo"
+          maxWidth="lg"
+          onClose={() => setShowUserModal(false)}
+          footer={
+            <>
+              <CancelButton onClick={() => setShowUserModal(false)} />
+              <SubmitButton color="indigo">
+                <UserPlus className="w-4 h-4" />
+                Créer le Compte Utilisateur
+              </SubmitButton>
+            </>
+          }
+        >
+          <form onSubmit={handleCreateUserSubmit} className="p-6 space-y-4">
+            <FormField label="Nom Complet" required>
+              <ModalInput
+                accent="blue"
+                required
+                placeholder="Ex: Dr. Ahmed Benali"
+                value={newUser.name}
+                onChange={e => setNewUser({ ...newUser, name: e.target.value })}
+              />
+            </FormField>
+
+            <FormField label="Adresse Email" required>
+              <ModalInput
+                accent="blue"
+                type="email"
+                required
+                placeholder="ahmed@alshifa.dz"
+                value={newUser.email}
+                onChange={e => setNewUser({ ...newUser, email: e.target.value })}
+              />
+            </FormField>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField label="Mot de passe" required>
+                <ModalInput
+                  accent="blue"
+                  type="password"
+                  required
+                  value={newUser.password}
+                  onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                />
+              </FormField>
+
+              <FormField label="Rôle Métier" required>
+                <ModalSelect
+                  accent="blue"
+                  value={newUser.role}
+                  onChange={e => setNewUser({ ...newUser, role: e.target.value as UserRole })}
+                >
+                  <option value="medecin">Médecin</option>
+                  <option value="gynecologue">Gynécologue</option>
+                  <option value="receptionniste">Réceptionniste</option>
+                  <option value="pharmacien">Pharmacien</option>
+                  <option value="laborantin">Laborantin</option>
+                  <option value="infirmier">Infirmier/ère</option>
+                  <option value="caissier">Caissier/ère</option>
+                  <option value="admin">Administrateur</option>
+                </ModalSelect>
+              </FormField>
             </div>
 
-            <form onSubmit={handleCreateUserSubmit} className="p-6 space-y-4 text-xs">
-              <div>
-                <label className="font-medium text-slate-700 block mb-1">Nom complet *</label>
-                <input
-                  required
-                  placeholder="Ex: Dr. Ahmed Benali"
-                  className="w-full px-3 py-2 border rounded-xl outline-none"
-                  value={newUser.name}
-                  onChange={e => setNewUser({ ...newUser, name: e.target.value })}
-                />
-              </div>
+            <FormField label="Service / Département">
+              <ModalInput
+                accent="blue"
+                placeholder="Ex: Médecine Générale, Urgences, Maternité..."
+                value={newUser.service}
+                onChange={e => setNewUser({ ...newUser, service: e.target.value })}
+              />
+            </FormField>
+          </form>
+        </ModalShell>
+      )}
 
-              <div>
-                <label className="font-medium text-slate-700 block mb-1">Adresse Email *</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="ahmed@alshifa.dz"
-                  className="w-full px-3 py-2 border rounded-xl outline-none"
-                  value={newUser.email}
-                  onChange={e => setNewUser({ ...newUser, email: e.target.value })}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-medium text-slate-700 block mb-1">Mot de passe *</label>
-                  <input
-                    type="password"
-                    required
-                    className="w-full px-3 py-2 border rounded-xl outline-none"
-                    value={newUser.password}
-                    onChange={e => setNewUser({ ...newUser, password: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="font-medium text-slate-700 block mb-1">Rôle *</label>
-                  <select
-                    className="w-full px-3 py-2 border rounded-xl outline-none font-bold text-slate-800"
-                    value={newUser.role}
-                    onChange={e => setNewUser({ ...newUser, role: e.target.value as UserRole })}
-                  >
-                    <option value="medecin">Médecin</option>
-                    <option value="gynecologue">Gynécologue</option>
-                    <option value="receptionniste">Réceptionniste</option>
-                    <option value="pharmacien">Pharmacien</option>
-                    <option value="laborantin">Laborantin</option>
-                    <option value="infirmier">Infirmier/ère</option>
-                    <option value="caissier">Caissier/ère</option>
-                    <option value="admin">Administrateur</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="font-medium text-slate-700 block mb-1">Service / Département</label>
-                <input
-                  placeholder="Ex: Médecine Générale, Urgences..."
-                  className="w-full px-3 py-2 border rounded-xl outline-none"
-                  value={newUser.service}
-                  onChange={e => setNewUser({ ...newUser, service: e.target.value })}
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t">
-                <Button type="button" variant="ghost" onClick={() => setShowUserModal(false)}>
-                  Annuler
-                </Button>
-                <Button type="submit" className="bg-slate-900 hover:bg-slate-800">
-                  Créer le Compte
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {showAppointmentModal && (
+        <AppointmentModal
+          onClose={() => setShowAppointmentModal(false)}
+        />
       )}
     </div>
   );

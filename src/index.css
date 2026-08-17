@@ -12,11 +12,15 @@
 
 @layer utilities {
   .animate-fade-in {
-    animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   .animate-slide-in {
-    animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   .animate-pulse-subtle {
@@ -24,24 +28,22 @@
   }
 
   .glass {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: #ffffff;
   }
 
   .stat-card-motion {
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .stat-card-motion:hover {
-    transform: translateY(-4px) scale(1.01);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+    transform: translateY(-3px);
+    box-shadow: 0 14px 20px -4px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
   }
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -49,10 +51,21 @@
   }
 }
 
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateX(12px);
+    transform: translateX(10px);
   }
   to {
     opacity: 1;
@@ -68,3 +81,27 @@
     opacity: 0.7;
   }
 }
+
+/* ===== PRINT STYLES FOR RECEIPTS ===== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt-card, #printable-receipt-card * {
+    visibility: visible;
+  }
+  #printable-receipt-card {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 16px;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+

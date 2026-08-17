@@ -86,16 +86,28 @@ export function useLabRequests(options: UseLabRequestsOptions = {}) {
     }
   };
 
-  const updateResult = async (id: string, resultText: string, validatedBy: string) => {
+  const updateResult = async (
+    id: string,
+    resultText: string,
+    validatedBy: string,
+    attachment?: { file_url: string; file_name?: string; file_type?: string; file_size?: number }
+  ) => {
     try {
+      const payload: any = {
+        status: 'termine',
+        results_text: resultText,
+        validated_by: validatedBy,
+        validated_at: new Date().toISOString(),
+      };
+      if (attachment) {
+        payload.file_url = attachment.file_url;
+        payload.file_name = attachment.file_name;
+        payload.file_type = attachment.file_type;
+        payload.file_size = attachment.file_size;
+      }
       const { error: err } = await supabase
         .from('lab_tests')
-        .update({
-          status: 'termine',
-          results_text: resultText,
-          validated_by: validatedBy,
-          validated_at: new Date().toISOString(),
-        })
+        .update(payload)
         .eq('id', id);
       if (err) throw err;
       await load();

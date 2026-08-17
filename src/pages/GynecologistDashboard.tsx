@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { Button } from '../components/Button';
 import { PatientProfile } from '../components/PatientProfile';
@@ -15,13 +15,16 @@ import {
   FlaskConical,
   RefreshCw,
   Sparkles,
-  FileText
+  FileText,
+  Calendar
 } from 'lucide-react';
+import { AppointmentModal } from '../components/AppointmentModal';
 import { cn } from '../utils/cn';
 import { usePatients } from '../hooks/usePatients';
 import { usePrescriptions } from '../hooks/usePrescriptions';
 import { useLabRequests } from '../hooks/useLabRequests';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../hooks/useLanguage';
 import { supabase } from '../services/supabase';
 import type { Patient, GynGrossesse } from '../types';
 
@@ -29,6 +32,7 @@ type TabType = 'overview' | 'patients' | 'pregnancy' | 'lab';
 
 export function GynecologistDashboard() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [grossesses, setGrossesses] = useState<GynGrossesse[]>([]);
@@ -38,6 +42,7 @@ export function GynecologistDashboard() {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [prescriptionPatient, setPrescriptionPatient] = useState<Patient | null>(null);
   const [labPatient, setLabPatient] = useState<Patient | null>(null);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
 
   const { patients, loading: loadingPatients, reload: reloadPatients } = usePatients({ limit: 100 });
   const { prescriptions, reload: reloadPrescriptions } = usePrescriptions({ limit: 50 });
@@ -77,8 +82,21 @@ export function GynecologistDashboard() {
     }
   };
 
-  const femalePatients = patients.filter(p => p.sex === 'F');
-  const pregnantPatientsFromBase = patients.filter(p => p.sex === 'F' && (p.is_pregnant || p.visit_reason === 'Grossesse' || p.visit_reason === 'Suivi de Grossesse'));
+  const femalePatients = useMemo(() => patients.filter(p => p.sex === 'F'), [patients]);
+
+  // Toutes les patientes enceintes enregistrées à la réception ou en suivi
+  const pregnantPatientsFromBase = useMemo(() => {
+    return patients.filter(p =>
+      (p.sex === 'F' || !p.sex) &&
+      (p.is_pregnant ||
+       p.pregnancy_months ||
+       p.pregnancy_weeks ||
+       p.visit_reason?.toLowerCase().includes('grossesse') ||
+       p.visit_reason?.toLowerCase().includes('cpn') ||
+       p.visit_reason?.toLowerCase().includes('maternite') ||
+       p.case_description?.toLowerCase().includes('enceinte'))
+    );
+  }, [patients]);
 
   const filteredPatients = femalePatients.filter(p =>
     !searchQuery ||
@@ -89,9 +107,9 @@ export function GynecologistDashboard() {
 
   const stats = [
     {
-      title: 'Patientes Enceintes',
+      title: t('stats.pregnant_patients', 'Patientes Enceintes'),
       value: Math.max(grossesses.length, pregnantPatientsFromBase.length).toString(),
-      sub: 'Suivies actuellement',
+      sub: 'Suivies en CPN & Maternité',
       icon: <Baby className="w-6 h-6" />,
       color: 'from-pink-500 to-rose-500',
     },
@@ -135,6 +153,10 @@ export function GynecologistDashboard() {
             <RefreshCw className="w-4 h-4 mr-2" />
             Actualiser
           </Button>
+          <Button onClick={() => setShowAppointmentModal(true)} className="bg-pink-600 hover:bg-pink-700 text-white font-bold">
+            <Calendar className="w-4 h-4 mr-2" />
+            Planifier RDV
+          </Button>
         </div>
       </div>
 
@@ -160,20 +182,23 @@ export function GynecologistDashboard() {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-slate-200">
-        {(['overview', 'patients', 'pregnancy', 'lab'] as const).map((tab) => (
+        {[
+          { id: 'overview', label: t('gyn.tab.overview', 'Vue d\'ensemble') },
+          { id: 'patients', label: `${t('gyn.tab.patients', 'Patientes')} (${femalePatients.length})` },
+          { id: 'pregnancy', label: `${t('gyn.tab.pregnancy', 'Suivi des Grossesses (CPN)')} (${Math.max(grossesses.length, pregnantPatientsFromBase.length)})` },
+          { id: 'lab', label: `${t('gyn.tab.labs', 'Examens & Labo')} (${labTests.length})` },
+        ].map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
             className={cn(
               'px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-px',
-              activeTab === tab
+              activeTab === tab.id
                 ? 'border-pink-500 text-pink-600 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             )}
           >
-            {tab === 'overview' ? 'Vue d\'ensemble' :
-             tab === 'patients' ? `Patientes (${femalePatients.length})` :
-             tab === 'pregnancy' ? `Grossesses (${Math.max(grossesses.length, pregnantPatientsFromBase.length)})` : 'Analyses'}
+            {tab.label}
           </button>
         ))}
       </div>
@@ -359,6 +384,12 @@ export function GynecologistDashboard() {
           patient={labPatient}
           onClose={() => setLabPatient(null)}
           onSuccess={() => reloadLabs()}
+        />
+      )}
+
+      {showAppointmentModal && (
+        <AppointmentModal
+          onClose={() => setShowAppointmentModal(false)}
         />
       )}
     </div>

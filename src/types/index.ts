@@ -9,11 +9,7 @@ export type UserRole =
   | 'infirmier'
   | 'laborantin'
   | 'receptionniste'
-  | 'radiologue'
-  | 'secretary'
-  | 'pharmacien'
-  | 'pharmacien_chef'
-  | 'caissier';
+  | 'radiologue';
 
 export interface User {
   id: string;
@@ -52,8 +48,17 @@ export interface Patient {
   // Accompagnant
   is_accompanied?: boolean;
   accompanier_id?: string;
+  accompanier_first_name?: string;
+  accompanier_last_name?: string;
+  accompanier_phone?: string;
+  accompanier_relationship?: string;
   // Grossesse
   is_pregnant?: boolean;
+  pregnancy_months?: string;
+  pregnancy_weeks?: string;
+  ddr?: string;
+  dpa?: string;
+  pregnancy_notes?: string;
   case_description?: string;
   // Dates
   arrival_at?: string;
@@ -205,6 +210,9 @@ export interface LabTest {
   status: 'en_attente' | 'en_cours' | 'termine';
   results_text?: string;
   file_url?: string;
+  file_name?: string;
+  file_type?: string;
+  file_size?: number;
   validated_by?: string;
   validated_at?: string;
   created_at: string;

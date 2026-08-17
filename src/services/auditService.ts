@@ -242,14 +242,14 @@ export const auditActions = {
     logAudit({ action: 'create', entity_type: 'invoice', entity_id: invoiceId, patient_id: patientId, amount, new_value: reference }),
   
   invoicePaid: (invoiceId: string, reference: string, amount: number, patientId?: string) =>
-    logAudit({ action: 'payment', entity_type: 'invoice', entity_id: invoiceId, patient_id: patientId, invoice_id: invoiceId, amount, new_value: `${reference} - ${amount} DH` }),
+    logAudit({ action: 'payment', entity_type: 'invoice', entity_id: invoiceId, patient_id: patientId, invoice_id: invoiceId, amount, new_value: `${reference} - ${amount} FCFA` }),
   
   invoiceCancelled: (invoiceId: string, reference: string, reason: string) =>
     logAudit({ action: 'cancel', entity_type: 'invoice', entity_id: invoiceId, new_value: `${reference} - ${reason}` }),
 
   // Transaction
   transactionCreated: (transactionId: string, reference: string, amount: number, type: string) =>
-    logAudit({ action: 'create', entity_type: 'transaction', entity_id: transactionId, amount, new_value: `${reference} - ${type} - ${amount} DH` }),
+    logAudit({ action: 'create', entity_type: 'transaction', entity_id: transactionId, amount, new_value: `${reference} - ${type} - ${amount} FCFA` }),
 
   // Ordonnance
   prescriptionCreated: (prescriptionId: string, reference: string, patientId: string) =>
@@ -267,16 +267,16 @@ export const auditActions = {
 
   // Dépense
   expenseCreated: (expenseId: string, reference: string, amount: number, category: string) =>
-    logAudit({ action: 'create', entity_type: 'expense', entity_id: expenseId, amount, new_value: `${reference} - ${category} - ${amount} DH` }),
+    logAudit({ action: 'create', entity_type: 'expense', entity_id: expenseId, amount, new_value: `${reference} - ${category} - ${amount} FCFA` }),
   
   expenseApproved: (expenseId: string, reference: string, amount: number) =>
-    logAudit({ action: 'approve', entity_type: 'expense', entity_id: expenseId, amount, new_value: `${reference} - ${amount} DH` }),
+    logAudit({ action: 'approve', entity_type: 'expense', entity_id: expenseId, amount, new_value: `${reference} - ${amount} FCFA` }),
 
   // Remboursement
   refundCreated: (refundId: string, reference: string, amount: number, patientId: string) =>
-    logAudit({ action: 'refund', entity_type: 'refund', entity_id: refundId, patient_id: patientId, amount, new_value: `${reference} - ${amount} DH` }),
+    logAudit({ action: 'refund', entity_type: 'refund', entity_id: refundId, patient_id: patientId, amount, new_value: `${reference} - ${amount} FCFA` }),
 
   // Clôture caisse
   cashClosureCreated: (closureId: string, reference: string, variance: number) =>
-    logAudit({ action: 'close', entity_type: 'cash_register_closure', entity_id: closureId, new_value: `${reference} - Écart: ${variance} DH` }),
+    logAudit({ action: 'close', entity_type: 'cash_register_closure', entity_id: closureId, new_value: `${reference} - Écart: ${variance} FCFA` }),
 };

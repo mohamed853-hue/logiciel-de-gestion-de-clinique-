@@ -363,7 +363,7 @@ export async function processPartialPayment(params: {
 
     const remainingAmount = invoice.total - invoice.paid_amount;
     if (params.amount > remainingAmount) {
-      return { error: `Le montant dépasse le reste à payer (${remainingAmount} DH)` };
+      return { error: `Le montant dépasse le reste à payer (${remainingAmount} FCFA)` };
     }
 
     return createPayment({

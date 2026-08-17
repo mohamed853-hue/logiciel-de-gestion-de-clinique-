@@ -5,6 +5,16 @@ import { PatientProfile } from '../components/PatientProfile';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { LoadingState } from '../components/LoadingState';
+import { Toast } from '../components/Toast';
+import type { ToastMessage } from '../components/Toast';
+import {
+  ModalShell,
+  ModalPortal,
+  FormField,
+  ModalTextarea,
+  CancelButton,
+  SubmitButton,
+} from '../components/ModalShell';
 import { 
   FlaskConical, 
   Clock, 
@@ -15,11 +25,14 @@ import {
   Eye, 
   RefreshCw,
   X,
-  FileCheck
+  Paperclip,
+  Download,
+  ZoomIn
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useLabRequests } from '../hooks/useLabRequests';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../hooks/useLanguage';
 import { supabase } from '../services/supabase';
 import type { LabTest } from '../types';
 
@@ -27,15 +40,19 @@ type TabType = 'overview' | 'requests' | 'results';
 
 export function LaboratoryDashboard() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
-  // Modal Saisie Résultat
+  // Modal Saisie Résultat & Fichier Joit
   const [resultModalTest, setResultModalTest] = useState<LabTest | null>(null);
   const [resultText, setResultText] = useState('');
+  const [resultRemarks, setResultRemarks] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [savingResult, setSavingResult] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
 
   const { labTests, loading, reload, updateResult } = useLabRequests({ limit: 100 });
 
@@ -57,37 +74,97 @@ export function LaboratoryDashboard() {
     if (!resultModalTest || !resultText.trim()) return;
 
     setSavingResult(true);
-    const success = await updateResult(
-      resultModalTest.id,
-      resultText.trim(),
-      `Laborantin ${user?.firstName} ${user?.lastName}`
-    );
-    setSavingResult(false);
+    let attachmentObj: { file_url: string; file_name?: string; file_type?: string; file_size?: number } | undefined = undefined;
 
-    if (success) {
-      // Envoyer une notification au médecin traitant
-      try {
-        await supabase.from('notifications').insert([{
-          recipient_role: 'medecin',
-          type: 'lab_result',
-          title: 'Résultat d\'analyse disponible',
-          message: `Les résultats de l'analyse ${resultModalTest.test_name} ont été validés par le laboratoire.`,
-          entity_type: 'lab_test',
-          entity_id: resultModalTest.id,
-          is_read: false,
-        }]);
-      } catch {
-        // ignore notification error
+    try {
+      // Si un fichier est sélectionné, l'uploader sur Supabase Storage (bucket 'lab-results')
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const cleanFileName = `result_${resultModalTest.id}_${Date.now()}.${fileExt}`;
+
+        const { error: uploadErr } = await supabase.storage
+          .from('lab-results')
+          .upload(cleanFileName, selectedFile, { upsert: true });
+
+        if (uploadErr) {
+          console.error('Storage upload error:', uploadErr);
+          setToast({
+            id: Date.now().toString(),
+            type: 'error',
+            title: 'Erreur d\'upload',
+            description: 'Impossible d\'enregistrer le fichier joint. Enregistrement du texte seul...'
+          });
+        } else {
+          const { data: publicUrlData } = supabase.storage
+            .from('lab-results')
+            .getPublicUrl(cleanFileName);
+
+          attachmentObj = {
+            file_url: publicUrlData.publicUrl,
+            file_name: selectedFile.name,
+            file_type: selectedFile.type,
+            file_size: selectedFile.size
+          };
+        }
       }
 
-      setResultModalTest(null);
-      setResultText('');
-      setToastMsg('Résultat validé et transmis au médecin !');
-      setTimeout(() => setToastMsg(''), 4000);
-      reload();
-    } else {
-      setToastMsg('Erreur lors de la validation du résultat.');
-      setTimeout(() => setToastMsg(''), 4000);
+      const success = await updateResult(
+        resultModalTest.id,
+        resultText.trim(),
+        `Laborantin ${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Laboratoire',
+        attachmentObj
+      );
+
+      // Sauvegarder les remarques si renseignées
+      if (resultRemarks.trim()) {
+        try {
+          const { supabase } = await import('../services/supabase');
+          await supabase
+            .from('lab_tests')
+            .update({ remarks: resultRemarks.trim() })
+            .eq('id', resultModalTest.id);
+        } catch { /* silent */ }
+      }
+
+      if (success) {
+        // Notification médecin
+        try {
+          await supabase.from('notifications').insert([{
+            recipient_role: 'medecin',
+            type: 'lab_result',
+            title: 'Résultat d\'analyse disponible',
+            message: `Résultats validés pour l'analyse : ${resultModalTest.test_name}`,
+            entity_type: 'lab_test',
+            entity_id: resultModalTest.id,
+            is_read: false,
+          }]);
+        } catch {
+          // ignore
+        }
+
+        setResultModalTest(null);
+        setResultText('');
+        setResultRemarks('');
+        setSelectedFile(null);
+        setToast({
+          id: Date.now().toString(),
+          type: 'success',
+          title: 'Résultat validé & Fichier joint !',
+          description: `Les résultats de ${resultModalTest.test_name} ont été transmis au médecin.`
+        });
+        reload();
+      } else {
+        throw new Error('Erreur de mise à jour');
+      }
+    } catch (err: any) {
+      setToast({
+        id: Date.now().toString(),
+        type: 'error',
+        title: 'Erreur de validation',
+        description: err.message || 'Une erreur est survenue lors de la sauvegarde.'
+      });
+    } finally {
+      setSavingResult(false);
     }
   };
 
@@ -107,48 +184,42 @@ export function LaboratoryDashboard() {
       title: 'Demandes en Attente',
       value: pendingRequests.length.toString(),
       sub: 'À traiter en priorité',
-      icon: <Clock className="w-6 h-6" />,
+      icon: <Clock className="w-5 h-5" />,
       color: 'from-amber-500 to-orange-500',
     },
     {
       title: 'Analyses en Cours',
       value: inProgressRequests.length.toString(),
       sub: 'En traitement',
-      icon: <FlaskConical className="w-6 h-6" />,
+      icon: <FlaskConical className="w-5 h-5" />,
       color: 'from-blue-500 to-cyan-500',
     },
     {
       title: 'Résultats Validés',
       value: completedRequests.length.toString(),
       sub: 'Transmis au médecin',
-      icon: <CheckCircle className="w-6 h-6" />,
+      icon: <CheckCircle className="w-5 h-5" />,
       color: 'from-emerald-500 to-teal-500',
     },
     {
       title: 'Analyses Urgentes',
       value: urgentRequests.length.toString(),
       sub: 'Priorité haute',
-      icon: <AlertCircle className="w-6 h-6" />,
+      icon: <AlertCircle className="w-5 h-5" />,
       color: 'from-red-500 to-rose-500',
     },
   ];
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Toast */}
-      {toastMsg && (
-        <div className="fixed top-4 right-4 z-50 px-5 py-3 rounded-xl bg-purple-50 text-purple-800 border border-purple-200 shadow-lg text-sm font-medium flex items-center gap-2">
-          <FileCheck className="w-4 h-4 text-purple-600" />
-          {toastMsg}
-        </div>
-      )}
+      <Toast toast={toast} onClose={() => setToast(null)} />
 
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Laboratoire d'Analyses Médicales</h1>
-          <p className="text-slate-500 text-sm mt-0.5">
-            {user?.firstName} {user?.lastName} — réception des demandes et validation des résultats
+          <p className="text-slate-500 text-xs mt-0.5">
+            {user?.firstName} {user?.lastName} — gestion des demandes, téléversement de rapports PDF/Word et validation
           </p>
         </div>
         <div className="flex gap-2">
@@ -162,15 +233,15 @@ export function LaboratoryDashboard() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {stats.map((stat) => (
-          <Card key={stat.title} className="stat-card-motion border-0 shadow-sm cursor-pointer">
+          <Card key={stat.title} className="border-0 shadow-sm">
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-slate-500">{stat.title}</p>
-                  <p className="text-3xl font-bold text-slate-800 mt-1">{stat.value}</p>
+                  <p className="text-xs font-semibold text-slate-500">{stat.title}</p>
+                  <p className="text-2xl font-black text-slate-800 mt-1">{stat.value}</p>
                   <p className="text-xs text-slate-400 mt-0.5">{stat.sub}</p>
                 </div>
-                <div className={cn('w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center text-white shadow-md', stat.color)}>
+                <div className={cn('w-12 h-12 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white shadow-md', stat.color)}>
                   {stat.icon}
                 </div>
               </div>
@@ -181,19 +252,22 @@ export function LaboratoryDashboard() {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-slate-200">
-        {(['overview', 'requests', 'results'] as const).map((tab) => (
+        {[
+          { id: 'overview', label: t('nav.overview', 'Vue d\'ensemble') },
+          { id: 'requests', label: `Demandes En Attente (${pendingRequests.length})` },
+          { id: 'results', label: `Résultats Validés (${completedRequests.length})` },
+        ].map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
             className={cn(
-              'px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-px',
-              activeTab === tab
-                ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+              'px-4 py-3 font-semibold text-xs transition-colors border-b-2 -mb-px',
+              activeTab === tab.id
+                ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             )}
           >
-            {tab === 'overview' ? 'Vue d\'ensemble' :
-             tab === 'requests' ? `Demandes En Attente (${pendingRequests.length})` : `Résultats Validés (${completedRequests.length})`}
+            {tab.label}
           </button>
         ))}
       </div>
@@ -208,7 +282,7 @@ export function LaboratoryDashboard() {
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   className="pl-9 pr-3 py-1.5 text-xs border border-slate-200 rounded-xl outline-none w-56"
-                  placeholder="Filtrer..."
+                  placeholder="Filtrer par nom, demandeur..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
@@ -219,7 +293,7 @@ export function LaboratoryDashboard() {
             {loading ? (
               <LoadingState type="table" rows={6} />
             ) : filteredTests.length === 0 ? (
-              <EmptyState title="Aucune demande transmise" description="Les demandes des médecins et gynécologues s'afficheront automatiquement." />
+              <EmptyState title="Aucune demande transmise" description="Les demandes créées par les médecins s'afficheront ici automatiquement." />
             ) : (
               <div className="space-y-3">
                 {filteredTests.map((test) => (
@@ -244,9 +318,28 @@ export function LaboratoryDashboard() {
                           Demandé par : <strong className="text-slate-700">{test.requested_by}</strong>
                         </p>
                         {test.results_text && (
-                          <p className="text-xs text-emerald-700 font-mono font-semibold mt-1 bg-emerald-50 p-1.5 rounded-lg">
-                            Résultat : {test.results_text}
+                          <p className="text-xs text-emerald-800 font-mono font-semibold mt-1 bg-emerald-50 p-2 rounded-xl border border-emerald-200">
+                            <strong>Observations :</strong> {test.results_text}
                           </p>
+                        )}
+                        {test.file_url && (
+                          <div className="mt-2 flex items-center gap-2 flex-wrap">
+                            <button
+                              onClick={() => setPreviewFile({ url: test.file_url!, name: test.file_name || 'Rapport', type: test.file_type || '' })}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold hover:bg-purple-200 transition-colors"
+                            >
+                              <ZoomIn className="w-3.5 h-3.5" />
+                              {test.file_name || 'Voir Rapport'}
+                            </button>
+                            <a
+                              href={test.file_url}
+                              download={test.file_name || 'rapport'}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
+                            >
+                              <Download className="w-3 h-3" />
+                              DL
+                            </a>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -261,13 +354,14 @@ export function LaboratoryDashboard() {
                       {test.status !== 'termine' && (
                         <Button
                           size="sm"
-                          className="bg-purple-600 hover:bg-purple-700"
+                          className="bg-purple-600 hover:bg-purple-700 font-bold"
                           onClick={() => {
                             setResultModalTest(test);
                             setResultText(test.results_text || '');
+                            setSelectedFile(null);
                           }}
                         >
-                          <Upload className="w-3.5 h-3.5 mr-1" /> Saisir Résultat
+                          <Upload className="w-3.5 h-3.5 mr-1" /> Saisir & Joindre Fichier
                         </Button>
                       )}
                     </div>
@@ -279,46 +373,11 @@ export function LaboratoryDashboard() {
         </Card>
       )}
 
-      {/* REQUESTS ONLY */}
-      {activeTab === 'requests' && (
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">Demandes Non Traitées</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {pendingRequests.length === 0 ? (
-              <EmptyState title="Aucune demande en attente" />
-            ) : (
-              <div className="space-y-3">
-                {pendingRequests.map((test) => (
-                  <div key={test.id} className="p-4 rounded-xl border bg-white flex justify-between items-center text-xs">
-                    <div>
-                      <p className="font-bold text-slate-800 text-sm">{test.test_name}</p>
-                      <p className="text-slate-500">Par : {test.requested_by}</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="bg-purple-600 hover:bg-purple-700"
-                      onClick={() => {
-                        setResultModalTest(test);
-                        setResultText('');
-                      }}
-                    >
-                      <Upload className="w-3.5 h-3.5 mr-1" /> Saisir Résultat
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* RESULTS ONLY */}
+      {/* RESULTS ARCHIVE */}
       {activeTab === 'results' && (
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">Historique des Analyses Validées</CardTitle>
+            <CardTitle className="text-base">Historique des Analyses Validées avec Fichiers Joints</CardTitle>
           </CardHeader>
           <CardContent>
             {completedRequests.length === 0 ? (
@@ -332,9 +391,28 @@ export function LaboratoryDashboard() {
                       <StatusBadge status="termine" />
                     </div>
                     <p className="text-slate-500">Demandeur : {test.requested_by} | Validé par : {test.validated_by || 'Laboratoire'}</p>
-                    <div className="p-3 bg-emerald-50 rounded-xl text-emerald-900 font-mono">
+                    <div className="p-3 bg-emerald-50 rounded-xl text-emerald-950 font-mono">
                       <strong>Résultat officiel :</strong> {test.results_text}
                     </div>
+                    {test.file_url && (
+                      <div className="pt-1 flex items-center gap-2">
+                        <button
+                          onClick={() => setPreviewFile({ url: test.file_url!, name: test.file_name || 'Rapport', type: test.file_type || '' })}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-xs font-bold hover:bg-purple-100 transition-colors"
+                        >
+                          <ZoomIn className="w-3.5 h-3.5" />
+                          Voir Rapport {test.file_name ? `(${test.file_name})` : ''}
+                        </button>
+                        <a
+                          href={test.file_url}
+                          download={test.file_name || 'rapport'}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Télécharger
+                        </a>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -343,62 +421,127 @@ export function LaboratoryDashboard() {
         </Card>
       )}
 
-      {/* Modal Saisie / Validation de Résultat */}
+      {/* MODAL SAISIE RÉSULTAT & TÉLÉVERSEMENT FICHIER (Z-[100] MAX-H) */}
       {resultModalTest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
-            <div className="bg-gradient-to-r from-purple-900 to-indigo-900 text-white p-5 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <FlaskConical className="w-6 h-6 text-purple-200" />
-                <div>
-                  <h2 className="font-bold text-lg">Saisie des Résultats</h2>
-                  <p className="text-xs text-purple-200">{resultModalTest.test_name}</p>
-                </div>
-              </div>
-              <button onClick={() => setResultModalTest(null)} className="p-1 text-white hover:bg-white/10 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
+        <ModalShell
+          icon={<FlaskConical className="w-6 h-6 text-purple-200" />}
+          title="Saisie Résultat &amp; Fichier Rapport"
+          subtitle={`Analyse : ${resultModalTest.test_name} · Demandé par : ${resultModalTest.requested_by}`}
+          color="purple"
+          maxWidth="lg"
+          onClose={() => setResultModalTest(null)}
+          zIndex={100}
+          footer={
+            <>
+              <CancelButton onClick={() => setResultModalTest(null)} />
+              <SubmitButton
+                loading={savingResult}
+                loadingText="Téléversement..."
+                color="purple"
+              >
+                <Upload className="w-4 h-4" />
+                Valider &amp; Transmettre au Médecin
+              </SubmitButton>
+            </>
+          }
+        >
+          <form onSubmit={handleSaveResultSubmit} className="p-6 space-y-5">
+            <div className="p-3.5 bg-purple-50 rounded-2xl border border-purple-100 text-purple-900 text-xs">
+              <p className="font-bold text-sm text-purple-950">{resultModalTest.test_name}</p>
+              <p className="mt-0.5 text-purple-700">Praticien demandeur : <strong>{resultModalTest.requested_by}</strong></p>
             </div>
 
-            <form onSubmit={handleSaveResultSubmit} className="p-6 space-y-4 text-xs">
-              <div className="p-3 bg-slate-50 rounded-xl border text-slate-700">
-                <p><strong>Analyse :</strong> {resultModalTest.test_name}</p>
-                <p><strong>Demandeur :</strong> {resultModalTest.requested_by}</p>
-              </div>
+            <FormField label="Observations / Résultats Textuels" required>
+              <ModalTextarea
+                accent="purple"
+                rows={4}
+                required
+                placeholder="Ex: Glycémie à jeun : 0.95 g/L (Normal). Aucun germe détecté..."
+                value={resultText}
+                onChange={e => setResultText(e.target.value)}
+              />
+            </FormField>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Résultats Biologiques & Observations *
-                </label>
-                <textarea
-                  rows={4}
-                  required
-                  placeholder="Ex: Hémoglobine: 13.5 g/dL, Leucocytes: 7,200 /mm3..."
-                  className="w-full px-3 py-2 border rounded-xl outline-none font-mono text-xs focus:ring-2 focus:ring-purple-500"
-                  value={resultText}
-                  onChange={e => setResultText(e.target.value)}
+            <FormField label="Remarques Internes (Optionnel)">
+              <ModalTextarea
+                accent="purple"
+                rows={2}
+                placeholder="Conditions de prélèvement, remarques pour le médecin..."
+                value={resultRemarks}
+                onChange={e => setResultRemarks(e.target.value)}
+              />
+            </FormField>
+
+            <FormField label="Document / Fichier Joint (PDF, Word, Image)">
+              <div className="p-4 border-2 border-dashed border-purple-200 bg-purple-50/40 rounded-2xl text-center hover:bg-purple-50 transition-colors cursor-pointer relative">
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setSelectedFile(e.target.files[0]);
+                    }
+                  }}
                 />
+                <Paperclip className="w-6 h-6 text-purple-500 mx-auto mb-1" />
+                {selectedFile ? (
+                  <div className="text-purple-900">
+                    <p className="font-bold text-xs">{selectedFile.name}</p>
+                    <p className="text-[10px] text-slate-500">{(selectedFile.size / 1024).toFixed(1)} KB — Cliquez pour changer</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="font-bold text-purple-900 text-xs">Cliquez ou déposez un fichier ici</p>
+                    <p className="text-[10px] text-slate-400">Formats : PDF, Word (.docx), JPG, PNG</p>
+                  </div>
+                )}
               </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t">
-                <Button type="button" variant="ghost" onClick={() => setResultModalTest(null)}>
-                  Annuler
-                </Button>
-                <Button type="submit" disabled={savingResult} className="bg-purple-600 hover:bg-purple-700">
-                  {savingResult ? 'Validation...' : 'Valider & Transmettre au Médecin'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </FormField>
+          </form>
+        </ModalShell>
       )}
 
-      {/* Patient Profile Modal */}
+      {/* Drawer Patient Profile */}
       {selectedPatientId && (
         <PatientProfile
           patientId={selectedPatientId}
           onClose={() => setSelectedPatientId(null)}
         />
+      )}
+
+      {/* File Lightbox */}
+      {previewFile && (
+        <ModalPortal>
+          <div
+            className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-950/75 p-4 animate-fade-in"
+            onClick={() => setPreviewFile(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-scale-in"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+                <span className="font-bold text-slate-800 text-sm">{previewFile.name}</span>
+                <div className="flex gap-2">
+                  <a href={previewFile.url} download={previewFile.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100">
+                    <Download className="w-3.5 h-3.5" /> Télécharger
+                  </a>
+                  <button onClick={() => setPreviewFile(null)} className="p-1.5 rounded-lg hover:bg-slate-100">
+                    <X className="w-5 h-5 text-slate-500" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto p-4 bg-slate-50 flex items-center justify-center min-h-0">
+                {/\.(png|jpg|jpeg|gif|webp)$/i.test(previewFile.name) || previewFile.type?.startsWith('image/') ? (
+                  <img src={previewFile.url} alt={previewFile.name} className="max-w-full max-h-full object-contain rounded-xl" />
+                ) : (
+                  <iframe src={previewFile.url} title={previewFile.name} className="w-full h-full min-h-[500px] border-0 rounded-xl" />
+                )}
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
       )}
     </div>
   );
