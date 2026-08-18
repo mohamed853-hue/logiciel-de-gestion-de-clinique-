@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { supabase } from '../services/supabase';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface RadioExam {
   id: string;
@@ -41,6 +42,7 @@ interface RadioExam {
 type TabType = 'overview' | 'exams' | 'results';
 
 export function RadiologyDashboard() {
+  const { t, isArabic } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [exams, setExams] = useState<RadioExam[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,12 +159,12 @@ export function RadiologyDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Tableau de Bord Radiologie</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Gestion des examens d'imagerie médicale</p>
+          <h1 className="text-2xl font-bold text-slate-800">{t('radio.title', 'Imagerie Médicale & Radiologie')}</h1>
+          <p className="text-slate-500 text-sm mt-0.5">{isArabic ? 'إدارة فحوصات الأشعة والتصوير الطبي والتقارير الإشعاعية' : 'Gestion des examens d\'imagerie médicale'}</p>
         </div>
         <Button variant="outline" onClick={loadExams}>
           <RefreshCw className="w-4 h-4 mr-2" />
-          Actualiser
+          {t('refresh', 'Actualiser')}
         </Button>
       </div>
 

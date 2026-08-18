@@ -14,6 +14,7 @@ import {
   ModalErrorAlert,
 } from './ModalShell';
 import { cn } from '../utils/cn';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface DoctorOption {
   id: string;
@@ -55,6 +56,7 @@ export function AppointmentModal({
   onClose,
 }: AppointmentModalProps) {
   const isEditing = !!appointmentToEdit;
+  const { t, isArabic } = useLanguage();
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [doctorsList, setDoctorsList] = useState<DoctorOption[]>(DEFAULT_DOCTORS);

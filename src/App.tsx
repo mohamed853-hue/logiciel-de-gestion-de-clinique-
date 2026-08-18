@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
@@ -11,6 +12,7 @@ import { LaboratoryDashboard } from './pages/LaboratoryDashboard';
 import { NurseDashboard } from './pages/NurseDashboard';
 import { RadiologyDashboard } from './pages/RadiologyDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { fetchClinicSettingsFromSupabase } from './services/clinicSettingsService';
 import type { UserRole } from './types';
 
 function DashboardRouter() {
@@ -51,6 +53,10 @@ function DashboardRouter() {
 }
 
 function App() {
+  useEffect(() => {
+    fetchClinicSettingsFromSupabase();
+  }, []);
+
   return (
     <ErrorBoundary>
       <AuthProvider>
@@ -71,3 +77,4 @@ function App() {
 }
 
 export default App;
+

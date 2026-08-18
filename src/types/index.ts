@@ -164,8 +164,17 @@ export interface Prescription {
 }
 
 // =============================================================================
-// LABORATOIRE
+// LABORATOIRE & BIOLOGIE MÉDICALE
 // =============================================================================
+
+export interface LabParamResult {
+  param_name: string;
+  value: string | number;
+  unit?: string;
+  reference_range?: string;
+  status?: 'normal' | 'low' | 'high' | 'critical' | 'positive' | 'negative';
+}
+
 export interface LabRequest {
   id: string;
   patient_id: string;
@@ -174,8 +183,14 @@ export interface LabRequest {
   doctor_name: string;
   consultation_id?: string;
   priority: 'routine' | 'urgent' | 'emergency';
-  status: 'en_attente' | 'en_cours' | 'termine' | 'annule';
+  status: 'en_attente' | 'preleve' | 'en_cours' | 'termine' | 'annule';
   clinical_notes?: string;
+  clinical_indication?: string;
+  patient_fasting?: boolean;
+  on_antibiotics?: boolean;
+  antibiotics_details?: string;
+  gestational_age_sa?: string;
+  sample_type?: string;
   requested_at?: string;
   completed_at?: string;
   created_at: string;
@@ -187,7 +202,7 @@ export interface LabRequestItem {
   lab_request_id: string;
   test_name: string;
   test_category?: string;
-  status: 'en_attente' | 'en_cours' | 'termine';
+  status: 'en_attente' | 'preleve' | 'en_cours' | 'termine';
   result?: string;
   result_value?: string;
   unit?: string;
@@ -197,7 +212,7 @@ export interface LabRequestItem {
   created_at: string;
 }
 
-// Legacy — table lab_tests existante
+// Table lab_tests enrichie
 export interface LabTest {
   id: string;
   patient_id: string;
@@ -207,8 +222,18 @@ export interface LabTest {
   doctor_id?: string;
   consultation_id?: string;
   urgence?: boolean;
-  status: 'en_attente' | 'en_cours' | 'termine';
+  status: 'en_attente' | 'preleve' | 'en_cours' | 'termine';
+  // Renseignements cliniques
+  clinical_indication?: string;
+  patient_fasting?: boolean;
+  on_antibiotics?: boolean;
+  gestational_age_sa?: string;
+  sample_type?: string;
+  sample_taken_at?: string;
+  // Résultats textuels et structurés
   results_text?: string;
+  structured_results?: LabParamResult[];
+  remarks?: string;
   file_url?: string;
   file_name?: string;
   file_type?: string;
@@ -217,6 +242,19 @@ export interface LabTest {
   validated_at?: string;
   created_at: string;
 }
+
+export interface LabReagent {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number;
+  unit: string;
+  min_threshold: number;
+  expiry_date?: string;
+  lot_number?: string;
+  status: 'optimal' | 'warning' | 'critical' | 'expired';
+}
+
 
 // =============================================================================
 // GROSSESSE
@@ -428,3 +466,36 @@ export interface DashboardStats {
   monthRevenue: number;
   totalExpenses: number;
 }
+
+// =============================================================================
+// PATHOLOGIES & DIAGNOSTICS
+// =============================================================================
+export type PathologySeverity = 'simple' | 'modere' | 'grave' | 'critique';
+export type PathologyEvolution = 'en_traitement' | 'gueri' | 'en_observation' | 'transfere' | 'chronique';
+
+export interface PathologyCatalogItem {
+  id: string;
+  name: string;
+  category: string;
+  description?: string;
+  is_custom?: boolean;
+  created_at?: string;
+}
+
+export interface PatientDiagnostic {
+  id: string;
+  patient_id: string;
+  patient_name?: string;
+  patient_file_number?: string;
+  doctor_id?: string;
+  doctor_name?: string;
+  disease_name: string;
+  category?: string;
+  severity: PathologySeverity;
+  evolution_status: PathologyEvolution;
+  notes?: string;
+  treatment_prescribed?: string;
+  created_at: string;
+  updated_at?: string;
+}
+

@@ -25,6 +25,7 @@ import {
 import { cn } from '../utils/cn';
 import { usePatients } from '../hooks/usePatients';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../hooks/useLanguage';
 import { supabase } from '../services/supabase';
 import type { Patient, VitalsRecord } from '../types';
 
@@ -32,6 +33,7 @@ type TabType = 'overview' | 'tasks' | 'patients' | 'vitals';
 
 export function NurseDashboard() {
   const { user } = useAuth();
+  const { t, isArabic } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [vitalsList, setVitalsList] = useState<VitalsRecord[]>([]);
@@ -174,20 +176,20 @@ export function NurseDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Espace Infirmier / Infirmière</h1>
+          <h1 className="text-2xl font-bold text-slate-800">{t('nurse.title', 'Espace Soins & Constantes')}</h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            {user?.firstName} {user?.lastName} — administration des soins et prise de constantes
+            {user?.firstName} {user?.lastName} — {isArabic ? 'إدارة وتطبيق العلاجات التمريضية وأخذ العلامات الحيوية' : 'administration des soins et prise de constantes'}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => { reloadPatients(); loadVitals(); }}>
             <RefreshCw className="w-4 h-4 mr-2" />
-            Actualiser
+            {t('refresh', 'Actualiser')}
           </Button>
           {patients.length > 0 && (
             <Button onClick={() => { setSelectedPatientForVitals(patients[0]); setShowVitalsForm(true); }}>
               <Activity className="w-4 h-4 mr-2" />
-              Prendre Constantes
+              {t('btn.take_vitals', 'Prendre Constantes')}
             </Button>
           )}
         </div>

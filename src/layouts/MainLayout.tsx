@@ -238,7 +238,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = navigationItems[user.role] || [];
   const accentGradient = ROLE_ACCENT[user.role] || 'from-blue-700 to-indigo-700';
-  const roleLabel = ROLE_LABELS[user.role] || user.role;
+  const roleLabel = t('role.' + user.role, ROLE_LABELS[user.role] || user.role);
 
   return (
     <div className="min-h-screen bg-slate-50 flex" dir={isArabic ? 'rtl' : 'ltr'}>

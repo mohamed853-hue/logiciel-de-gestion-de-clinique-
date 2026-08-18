@@ -142,20 +142,20 @@ export function GynecologistDashboard() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            Espace Gynécologie & Obstétrique <Sparkles className="w-5 h-5 text-pink-500 animate-pulse" />
+            {t('gyneco.title', 'Espace Gynécologie & Maternité')} <Sparkles className="w-5 h-5 text-pink-500 animate-pulse" />
           </h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            Dr. {user?.firstName} {user?.lastName} — suivi de grossesse et consultations gynécologiques
+            Dr. {user?.firstName} {user?.lastName} — {t('stats.subtitle', 'suivi de grossesse et consultations gynécologiques')}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => { reloadPatients(); loadGrossesses(); }}>
             <RefreshCw className="w-4 h-4 mr-2" />
-            Actualiser
+            {t('refresh', 'Actualiser')}
           </Button>
           <Button onClick={() => setShowAppointmentModal(true)} className="bg-pink-600 hover:bg-pink-700 text-white font-bold">
             <Calendar className="w-4 h-4 mr-2" />
-            Planifier RDV
+            {t('btn.schedule_appointment', 'Planifier RDV')}
           </Button>
         </div>
       </div>

@@ -5,7 +5,7 @@ import type { User, UserRole } from '../types';
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string, role: UserRole) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -24,28 +24,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = async (email: string, password: string, role: UserRole) => {
+  const login = async (email: string, password: string) => {
     try {
-      // Récupérer l'utilisateur depuis Supabase
+      // Récupérer l'utilisateur depuis Supabase — le rôle est lu depuis la BDD
       const { data, error } = await supabase
         .from('app_users')
         .select('*')
         .eq('email', email)
         .eq('password', password)
-        .eq('role', role)
         .single();
 
       if (error || !data) {
-        throw new Error('Identifiants invalides');
+        throw new Error('Identifiants invalides. Vérifiez votre email et mot de passe.');
       }
 
-      // Créer l'objet User
+      // Créer l'objet User avec le rôle stocké en BDD
       const userData: User = {
         id: data.id,
         email: data.email,
-        firstName: data.name.split(' ')[0] || '',
-        lastName: data.name.split(' ').slice(1).join(' ') || '',
-        role: role,
+        firstName: data.name?.split(' ')[0] || '',
+        lastName: data.name?.split(' ').slice(1).join(' ') || '',
+        role: data.role as UserRole,
         createdAt: data.created_at || new Date().toISOString(),
       };
 

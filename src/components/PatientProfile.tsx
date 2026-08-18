@@ -133,10 +133,13 @@ interface CareBillingItem {
   created_at: string;
 }
 
-type ProfileTab = 'identity' | 'vitals' | 'care-bills' | 'appointments' | 'prescriptions' | 'labs';
+import { getPatientDiagnostics } from '../services/pathologyService';
+import type { PatientDiagnostic } from '../types';
+
+type ProfileTab = 'identity' | 'diagnostics' | 'vitals' | 'care-bills' | 'appointments' | 'prescriptions' | 'labs';
 
 export function PatientProfile({ patientId, onClose, onNewPrescription, onNewLabRequest }: PatientProfileProps) {
-  const { t } = useLanguage();
+  const { t, isArabic } = useLanguage();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [activeTab, setActiveTab] = useState<ProfileTab>('identity');
   const [loading, setLoading] = useState(true);
@@ -148,6 +151,7 @@ export function PatientProfile({ patientId, onClose, onNewPrescription, onNewLab
   const [labs, setLabs] = useState<LabTest[]>([]);
   const [vitals, setVitals] = useState<VitalsRecord[]>([]);
   const [careBills, setCareBills] = useState<CareBillingItem[]>([]);
+  const [diagnostics, setDiagnostics] = useState<PatientDiagnostic[]>([]);
 
   // Modal paiement direct & Reçu
   const [showDirectPaymentModal, setShowDirectPaymentModal] = useState(false);
@@ -161,13 +165,14 @@ export function PatientProfile({ patientId, onClose, onNewPrescription, onNewLab
     if (!patientId) return;
     setLoading(true);
     try {
-      const [pRes, appRes, prescRes, labRes, vitRes, careRes] = await Promise.all([
+      const [pRes, appRes, prescRes, labRes, vitRes, careRes, diagRes] = await Promise.all([
         supabase.from('patients').select('*').eq('id', patientId).single(),
         supabase.from('appointments').select('*').eq('patient_id', patientId).order('appointment_date', { ascending: false }),
         supabase.from('prescriptions').select('*').eq('patient_id', patientId).order('created_at', { ascending: false }),
         supabase.from('lab_tests').select('*').eq('patient_id', patientId).order('created_at', { ascending: false }),
         supabase.from('vitals_records').select('*').eq('patient_id', patientId).order('created_at', { ascending: false }),
         supabase.from('patient_care_billing').select('*').eq('patient_id', patientId).order('created_at', { ascending: false }),
+        getPatientDiagnostics(patientId),
       ]);
 
       if (pRes.data) setPatient(pRes.data);
@@ -179,6 +184,7 @@ export function PatientProfile({ patientId, onClose, onNewPrescription, onNewLab
       setLabs(labRes.data || []);
       setVitals(vitRes.data || []);
       setCareBills(careRes.data || []);
+      setDiagnostics(diagRes || []);
     } catch (err) {
       console.error('Error loading patient profile:', err);
     } finally {
@@ -592,6 +598,7 @@ export function PatientProfile({ patientId, onClose, onNewPrescription, onNewLab
           <div className="flex border-b border-slate-200 bg-slate-100/80 px-4 overflow-x-auto scrollbar-none flex-shrink-0 gap-1 pt-1.5">
             {[
               { id: 'identity', label: t('profile.tab.identity', 'Identité & Infos'), icon: <User className="w-3.5 h-3.5" /> },
+              { id: 'diagnostics', label: `${isArabic ? 'التشخيص والأمراض' : 'Diagnostics & Pathologies'} (${diagnostics.length})`, icon: <Stethoscope className="w-3.5 h-3.5" /> },
               { id: 'care-bills', label: `${t('profile.tab.care_bills', 'Soins & Factures')} (${unpaidBills.length > 0 ? `⚠️ ${unpaidBills.length}` : careBills.length})`, icon: <CreditCard className="w-3.5 h-3.5" /> },
               { id: 'vitals', label: `${t('profile.tab.vitals', 'Constantes')} (${vitals.length})`, icon: <Activity className="w-3.5 h-3.5" /> },
               { id: 'appointments', label: `${t('profile.tab.appointments', 'RDV')} (${appointments.length})`, icon: <Calendar className="w-3.5 h-3.5" /> },
@@ -622,6 +629,69 @@ export function PatientProfile({ patientId, onClose, onNewPrescription, onNewLab
               <div className="p-12 text-center text-slate-400 font-bold">Patient introuvable dans le système.</div>
             ) : (
               <>
+                {/* TAB 0: DIAGNOSTICS & PATHOLOGIES */}
+                {activeTab === 'diagnostics' && (
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                      <Stethoscope className="w-4 h-4 text-teal-600" />
+                      {isArabic ? 'سجل الأمراض والتشخيصات الطبية للمريض' : 'Pathologies Diagnostiquées & Suivi Thérapeutique'}
+                    </h3>
+
+                    {diagnostics.length === 0 ? (
+                      <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-xs font-bold">
+                        {isArabic ? 'لم يتم تسجيل أي تشخيص لهذا المريض بعد.' : 'Aucune pathologie diagnostiquée enregistrée pour ce patient.'}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {diagnostics.map((diag) => (
+                          <div key={diag.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <h4 className="text-sm font-black text-slate-800">{diag.disease_name}</h4>
+                                <p className="text-[11px] text-slate-400 font-semibold">{diag.category || 'Général'} · {diag.doctor_name}</p>
+                              </div>
+                              <span className={cn(
+                                'px-2.5 py-1 rounded-full text-[10px] font-black uppercase',
+                                diag.severity === 'simple' ? 'bg-emerald-100 text-emerald-800' :
+                                diag.severity === 'modere' ? 'bg-amber-100 text-amber-800' :
+                                diag.severity === 'grave' ? 'bg-orange-100 text-orange-800' : 'bg-rose-100 text-rose-800'
+                              )}>
+                                {diag.severity === 'simple' ? '🟢 Simple' :
+                                 diag.severity === 'modere' ? '🟡 Modéré' :
+                                 diag.severity === 'grave' ? '🟠 Grave' : '🔴 Critique'}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
+                              <span className="font-semibold text-slate-600">Statut :</span>
+                              <span className="font-bold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 text-[11px]">
+                                {diag.evolution_status === 'gueri' ? '✅ Guéri' :
+                                 diag.evolution_status === 'en_traitement' ? '💊 En traitement' :
+                                 diag.evolution_status === 'en_observation' ? '🏥 En observation' :
+                                 diag.evolution_status === 'transfere' ? '🚑 Transféré' : '🔄 Chronique'}
+                              </span>
+                            </div>
+
+                            {diag.treatment_prescribed && (
+                              <div className="p-2.5 rounded-xl bg-teal-50 text-teal-950 text-xs">
+                                <p className="font-bold text-[10px] uppercase text-teal-800">Traitement prescrit :</p>
+                                <p className="mt-0.5">{diag.treatment_prescribed}</p>
+                              </div>
+                            )}
+
+                            {diag.notes && (
+                              <p className="text-xs text-slate-500 italic">« {diag.notes} »</p>
+                            )}
+
+                            <div className="text-[10px] text-slate-400 text-right">
+                              {new Date(diag.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {/* TAB 1: IDENTITÉ */}
                 {activeTab === 'identity' && (
                   <div className="space-y-4">

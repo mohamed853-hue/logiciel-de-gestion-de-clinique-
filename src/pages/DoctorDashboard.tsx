@@ -5,6 +5,7 @@ import { PatientProfile } from '../components/PatientProfile';
 import { PrescriptionForm } from '../components/PrescriptionForm';
 import { LabRequestForm } from '../components/LabRequestForm';
 import { AppointmentModal } from '../components/AppointmentModal';
+import { DiagnosticModal } from '../components/DiagnosticModal';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { LoadingState } from '../components/LoadingState';
@@ -63,6 +64,7 @@ export function DoctorDashboard() {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [prescriptionPatient, setPrescriptionPatient] = useState<Patient | null>(null);
   const [labPatient, setLabPatient] = useState<Patient | null>(null);
+  const [diagnosticPatient, setDiagnosticPatient] = useState<Patient | null>(null);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
 
@@ -484,15 +486,18 @@ export function DoctorDashboard() {
                           <td className="py-3 px-3 text-center">
                             <StatusBadge status={patient.arrival_status || 'stable'} />
                           </td>
-                          <td className="py-3 px-3 text-right space-x-1">
+                          <td className="py-3 px-3 text-right space-x-1 whitespace-nowrap">
                             <Button size="sm" variant="ghost" onClick={() => setSelectedPatientId(patient.id)}>
-                              <Eye className="w-4 h-4 mr-1" /> Dossier
+                              <Eye className="w-4 h-4 mr-1" /> {t('btn.view_file', 'Dossier')}
+                            </Button>
+                            <Button size="sm" variant="outline" className="border-teal-300 text-teal-700 bg-teal-50 hover:bg-teal-100" onClick={() => setDiagnosticPatient(patient)}>
+                              <Stethoscope className="w-4 h-4 mr-1 text-teal-600" /> {isArabic ? 'تشخيص المرض' : 'Diagnostiquer'}
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => setPrescriptionPatient(patient)}>
-                              <Pill className="w-4 h-4 mr-1 text-blue-600" /> Ordonnance
+                              <Pill className="w-4 h-4 mr-1 text-blue-600" /> {t('nav.prescriptions', 'Ordonnance')}
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => setLabPatient(patient)}>
-                              <FlaskConical className="w-4 h-4 mr-1 text-purple-600" /> Labo
+                              <FlaskConical className="w-4 h-4 mr-1 text-purple-600" /> {t('nav.lab', 'Labo')}
                             </Button>
                           </td>
                         </tr>
@@ -689,6 +694,16 @@ export function DoctorDashboard() {
           patient={prescriptionPatient}
           onClose={() => setPrescriptionPatient(null)}
           onSuccess={() => reloadPrescriptions()}
+        />
+      )}
+
+      {diagnosticPatient && (
+        <DiagnosticModal
+          patient={diagnosticPatient}
+          doctorName={`Dr. ${user?.firstName} ${user?.lastName}`}
+          doctorId={user?.id}
+          onClose={() => setDiagnosticPatient(null)}
+          onSuccess={() => reloadAll()}
         />
       )}
 

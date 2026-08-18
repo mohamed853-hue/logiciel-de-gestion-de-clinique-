@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { PharmacyModule } from '../components/PharmacyModule';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../hooks/useLanguage';
 
 export function PharmacyDashboard() {
   const { user } = useAuth();
+  const { t, isArabic } = useLanguage();
   const [initialSubTab, setInitialSubTab] = useState<'quick-sale' | 'prescriptions' | 'stock' | 'stock-entries' | 'alerts' | 'history'>('quick-sale');
 
   // Écouteur navigation globale via la sidebar
@@ -27,9 +29,9 @@ export function PharmacyDashboard() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Espace Pharmacie &amp; Stocks</h1>
+          <h1 className="text-2xl font-bold text-slate-800">{t('nav.pharmacy', 'Espace Pharmacie & Stocks')}</h1>
           <p className="text-slate-500 text-xs mt-0.5">
-            Bienvenue, {user?.firstName} {user?.lastName} — Ventes rapides au scanner, gestion des lots et péremptions
+            {t('welcome', 'Bienvenue')}, {user?.firstName} {user?.lastName} — {isArabic ? 'المبيعات السريعة بالماسح، إدارة المخزون وتواريخ الصلاحية' : 'Ventes rapides au scanner, gestion des lots et péremptions'}
           </p>
         </div>
       </div>
