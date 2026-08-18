@@ -56,7 +56,7 @@ const CHART_COLORS = ['#10b981', '#f59e0b', '#ef4444', '#dc2626', '#6366f1'];
 
 export function DoctorDashboard() {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, isArabic } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [searchQuery, setSearchQuery] = useState('');
 

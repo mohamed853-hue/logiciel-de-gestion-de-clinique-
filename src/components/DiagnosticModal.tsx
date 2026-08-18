@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, Plus, CheckCircle2, AlertTriangle, ShieldCheck, Activity, Search, Sparkles, X, ChevronRight } from 'lucide-react';
+import { Stethoscope, Plus, AlertTriangle, Activity, Search, X } from 'lucide-react';
 import type { Patient, PathologyCatalogItem, PathologySeverity, PathologyEvolution } from '../types';
+import { Button } from './Button';
 import {
   ModalShell,
   FormField,
   ModalInput,
-  ModalSelect,
-  ModalTextarea,
   CancelButton,
   SubmitButton,
 } from './ModalShell';
@@ -44,9 +43,8 @@ export function DiagnosticModal({
   onClose,
   onSuccess,
 }: DiagnosticModalProps) {
-  const { t, isArabic } = useLanguage();
+  const { isArabic } = useLanguage();
   const [catalog, setCatalog] = useState<PathologyCatalogItem[]>([]);
-  const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchDisease, setSearchDisease] = useState('');
 
@@ -68,14 +66,12 @@ export function DiagnosticModal({
   }, []);
 
   const loadCatalog = async () => {
-    setLoadingCatalog(true);
     const list = await getPathologiesCatalog();
     setCatalog(list);
     if (list.length > 0) {
       setSelectedDisease(list[0].name);
       setSelectedCategory(list[0].category || 'Général');
     }
-    setLoadingCatalog(false);
   };
 
   const handleSelectDisease = (disease: PathologyCatalogItem) => {
@@ -314,10 +310,9 @@ export function DiagnosticModal({
         {/* Footer */}
         <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
           <CancelButton onClick={onClose} />
-          <SubmitButton
-            disabled={saving}
-            label={saving ? (isArabic ? 'جاري الحفظ...' : 'Enregistrement...') : (isArabic ? 'تأكيد وحفظ التشخيص' : 'Valider & Enregistrer le Diagnostic')}
-          />
+          <SubmitButton disabled={saving}>
+            {saving ? (isArabic ? 'جاري الحفظ...' : 'Enregistrement...') : (isArabic ? 'تأكيد وحفظ التشخيص' : 'Valider & Enregistrer le Diagnostic')}
+          </SubmitButton>
         </div>
       </form>
     </ModalShell>

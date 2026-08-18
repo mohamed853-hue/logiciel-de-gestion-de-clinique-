@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { PathologyCatalogItem, PatientDiagnostic, PathologySeverity, PathologyEvolution } from '../types';
+import type { PathologyCatalogItem, PatientDiagnostic, PathologyEvolution } from '../types';
 
 export const DEFAULT_PATHOLOGIES: PathologyCatalogItem[] = [
   { id: 'PATH-001', name: 'Paludisme (Malaria)', category: 'Parasitaire & Infectieux', description: 'Infection parasitaire transmise par l’anophèle' },

@@ -13,7 +13,6 @@ import {
   ModalErrorAlert,
 } from './ModalShell';
 import { cn } from '../utils/cn';
-import { useLanguage } from '../hooks/useLanguage';
 
 interface NewPatientModalProps {
   onClose: () => void;
@@ -24,7 +23,6 @@ const RELATION_OPTIONS = ['Mari', 'Femme', 'Père', 'Mère', 'Frère', 'Sœur', 
 
 export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
   const clinicSettings = getClinicSettings();
-  const { t, isArabic } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 

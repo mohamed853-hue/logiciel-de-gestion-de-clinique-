@@ -1,16 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/Card';
 import { Button } from '../components/Button';
-import { EmptyState } from '../components/EmptyState';
-import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
 import { 
   Shield, 
   Users, 
   Activity, 
-  TrendingUp, 
   Search, 
-  Settings, 
   BarChart3, 
   RefreshCw, 
   UserCheck, 
@@ -21,24 +17,13 @@ import {
   Key, 
   DollarSign, 
   AlertTriangle, 
-  Pill, 
-  FlaskConical, 
   Stethoscope, 
-  Baby, 
   Heart, 
-  Clock, 
-  Lock, 
-  ShieldAlert, 
   CreditCard, 
-  FileText,
-  Filter,
-  ShieldCheck,
-  Zap,
-  Sparkles
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { supabase } from '../services/supabase';
-import type { UserRole, Patient, Appointment, PatientDiagnostic } from '../types';
+import type { UserRole, Patient, PatientDiagnostic } from '../types';
 import {
   ModalShell,
   FormField,
@@ -62,8 +47,6 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  AreaChart,
-  Area,
 } from 'recharts';
 
 interface AppUser {
@@ -97,12 +80,9 @@ export function AdminDashboard() {
   const [period, setPeriod] = useState<PeriodFilter>('all');
   const [usersList, setUsersList] = useState<AppUser[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [diagnostics, setDiagnostics] = useState<PatientDiagnostic[]>([]);
   const [carePayments, setCarePayments] = useState<any[]>([]);
   const [pharmacySales, setPharmacySales] = useState<any[]>([]);
-  const [lowStockMeds, setLowStockMeds] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [pathologySearch, setPathologySearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -144,29 +124,22 @@ export function AdminDashboard() {
   }, []);
 
   const loadData = async () => {
-    setLoading(true);
     try {
-      const [uRes, pRes, aRes, payRes, pharmRes, medRes, diagList] = await Promise.all([
+      const [uRes, pRes, payRes, pharmRes, diagList] = await Promise.all([
         supabase.from('app_users').select('*').order('created_at', { ascending: false }),
         supabase.from('patients').select('*').order('created_at', { ascending: false }).limit(500),
-        supabase.from('appointments').select('*').order('appointment_date', { ascending: true }).limit(200),
         supabase.from('care_payments').select('*').order('created_at', { ascending: false }).limit(200),
         supabase.from('pharmacy_sales').select('*').order('created_at', { ascending: false }).limit(200),
-        supabase.from('medicaments').select('*').lt('stock', 15).limit(50),
         getPatientDiagnostics(),
       ]);
 
       setUsersList(uRes.data || []);
       setPatients(pRes.data || []);
-      setAppointments(aRes.data || []);
       setCarePayments(payRes.data || []);
       setPharmacySales(pharmRes.data || []);
-      setLowStockMeds(medRes.data || []);
       setDiagnostics(diagList || []);
     } catch (e) {
       console.error('Error loading super admin data:', e);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -379,9 +352,6 @@ export function AdminDashboard() {
     const matchStatus = statusFilter === 'all' || u.status === statusFilter;
     return matchQuery && matchRole && matchStatus;
   });
-
-  const activeCount = usersList.filter(u => u.status === 'actif').length;
-  const inactiveCount = usersList.filter(u => u.status !== 'actif').length;
 
   return (
     <div className="space-y-6 animate-fade-in" dir={isArabic ? 'rtl' : 'ltr'}>
@@ -1236,7 +1206,9 @@ export function AdminDashboard() {
 
             <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
               <CancelButton onClick={() => setShowUserModal(false)} />
-              <SubmitButton label={isArabic ? 'تأكيد الإنشاء' : 'Créer l\'utilisateur'} />
+              <SubmitButton>
+                {isArabic ? 'تأكيد الإنشاء' : 'Créer l\'utilisateur'}
+              </SubmitButton>
             </div>
           </form>
         </ModalShell>
@@ -1262,7 +1234,9 @@ export function AdminDashboard() {
 
             <div className="flex justify-end gap-2 pt-2">
               <CancelButton onClick={() => setResetPwdUser(null)} />
-              <SubmitButton label={isArabic ? 'تحديث كلمة المرور' : 'Enregistrer'} />
+              <SubmitButton>
+                {isArabic ? 'تحديث كلمة المرور' : 'Enregistrer'}
+              </SubmitButton>
             </div>
           </form>
         </ModalShell>

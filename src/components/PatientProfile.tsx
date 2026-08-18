@@ -5,7 +5,7 @@ import {
   X, User, Phone, Calendar, Heart, FileText,
   FlaskConical, Activity, Clock, Pill,
   CreditCard, AlertTriangle, Download, Printer, ZoomIn,
-  ReceiptText
+  ReceiptText, Stethoscope
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { supabase } from '../services/supabase';

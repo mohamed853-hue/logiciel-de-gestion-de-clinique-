@@ -336,7 +336,8 @@ interface SubmitButtonProps {
   loading?: boolean;
   loadingText?: string;
   color?: 'blue' | 'purple' | 'teal' | 'rose' | 'emerald' | 'violet' | 'indigo' | 'amber';
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  label?: string;
   disabled?: boolean;
   onClick?: (e?: any) => void;
 }
@@ -352,7 +353,7 @@ const SUBMIT_COLORS: Record<string, string> = {
   amber:   'from-amber-500 via-amber-600 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-amber-500/25',
 };
 
-export function SubmitButton({ loading, loadingText = 'Traitement...', color = 'blue', children, disabled, onClick }: SubmitButtonProps) {
+export function SubmitButton({ loading, loadingText = 'Traitement...', color = 'blue', children, label, disabled, onClick }: SubmitButtonProps) {
   const colors = SUBMIT_COLORS[color] || SUBMIT_COLORS.blue;
   return (
     <button
@@ -371,7 +372,7 @@ export function SubmitButton({ loading, loadingText = 'Traitement...', color = '
           <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           {loadingText}
         </>
-      ) : children}
+      ) : (children || label || 'Valider')}
     </button>
   );
 }
