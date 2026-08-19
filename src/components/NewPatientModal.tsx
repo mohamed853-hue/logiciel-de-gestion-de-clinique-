@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UserPlus, User, Baby, Users, Activity, Sparkles, CheckCircle2, CreditCard, Stethoscope } from 'lucide-react';
 import { supabase } from '../services/supabase';
-import { getClinicSettings } from '../services/clinicSettingsService';
+import { useClinicSettings } from '../services/clinicSettingsService';
 import {
   ModalShell,
   FormSection,
@@ -22,7 +22,7 @@ interface NewPatientModalProps {
 const RELATION_OPTIONS = ['Mari', 'Femme', 'Père', 'Mère', 'Frère', 'Sœur', 'Fils', 'Fille', 'Proche', 'Autre'];
 
 export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
-  const clinicSettings = getClinicSettings();
+  const { settings: clinicSettings } = useClinicSettings();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 

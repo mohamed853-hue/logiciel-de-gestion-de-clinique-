@@ -47,17 +47,9 @@ import { supabase } from '../services/supabase';
 import type { Patient, Appointment } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useLanguage } from '../hooks/useLanguage';
-import { getClinicSettings } from '../services/clinicSettingsService';
+import { useClinicSettings, getClinicSettings } from '../services/clinicSettingsService';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-
-const ROOM_OPTIONS = [
-  { id: 'simple', label: 'Chambre Simple Standard', price: 15000 },
-  { id: 'double', label: 'Chambre Double Partagée', price: 10000 },
-  { id: 'vip', label: 'Chambre VIP Privée', price: 25000 },
-  { id: 'intensif', label: 'Unité de Soins Intensifs / Réa', price: 40000 },
-  { id: 'observation', label: 'Lit de Surveillance / Urgence (Journée)', price: 7500 },
-];
 
 const DEFAULT_CARE_ITEMS = [
   { id: 'c1', code: 'SOIN-001', title: 'Injection Intramusculaire / Intraveineuse', price: 2000 },
@@ -72,7 +64,16 @@ const DEFAULT_CARE_ITEMS = [
 
 export function ReceptionistDashboard() {
   const { t, isArabic } = useLanguage();
-  const clinicSettings = getClinicSettings();
+  const { settings: clinicSettings } = useClinicSettings();
+
+  const ROOM_OPTIONS = useMemo(() => [
+    { id: 'simple', label: 'Chambre Simple Standard', price: clinicSettings.roomSimple || 15000 },
+    { id: 'double', label: 'Chambre Double Partagée', price: clinicSettings.roomDouble || 10000 },
+    { id: 'vip', label: 'Chambre VIP Privée', price: clinicSettings.roomVip || 25000 },
+    { id: 'intensif', label: 'Unité de Soins Intensifs / Réa', price: clinicSettings.roomIntensive || 40000 },
+    { id: 'observation', label: 'Lit de Surveillance / Urgence (Journée)', price: clinicSettings.roomObservation || 7500 },
+  ], [clinicSettings]);
+
   const [activeTab, setActiveTab] = useState<'overview' | 'patients' | 'appointments' | 'prescriptions' | 'pharmacy' | 'cashier' | 'history' | 'stats'>('overview');
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -438,7 +439,7 @@ export function ReceptionistDashboard() {
 
       setSelectedCareItems({});
       setCustomCareList([]);
-      setHospitalStay({ enabled: false, roomType: 'simple', roomPrice: 15000, days: 1 });
+      setHospitalStay({ enabled: false, roomType: 'simple', roomPrice: clinicSettings.roomSimple || 15000, days: 1 });
       setDiscountAmount(0);
       setCashGiven('');
 
@@ -592,7 +593,7 @@ export function ReceptionistDashboard() {
       // Reset form
       setSelectedCareItems({});
       setCustomCareList([]);
-      setHospitalStay({ enabled: false, roomType: 'simple', roomPrice: 15000, days: 1 });
+      setHospitalStay({ enabled: false, roomType: 'simple', roomPrice: clinicSettings.roomSimple || 15000, days: 1 });
       setDiscountAmount(0);
       setCashGiven('');
       setProcessingPayment(false);
@@ -1609,14 +1610,20 @@ export function ReceptionistDashboard() {
                             value={consultationItem.type}
                             onChange={e => {
                               const t = e.target.value;
-                              const p = t === 'Consultation Spécialiste' ? 2500 : t === 'Consultation d\'Urgence' ? 2000 : t === 'Contrôle / Suivi' ? 800 : 1500;
+                              const p = t === 'Consultation Spécialiste' 
+                                ? (clinicSettings.consultationSpecialist || 10000) 
+                                : t === 'Consultation d\'Urgence' 
+                                ? (clinicSettings.consultationEmergency || 7500) 
+                                : t === 'Contrôle / Suivi' 
+                                ? (clinicSettings.consultationControl || 3000) 
+                                : (clinicSettings.consultationGeneral || 5000);
                               setConsultationItem({ enabled: true, type: t, price: p });
                             }}
                           >
-                            <option value="Consultation Générale">🩺 Consultation Générale (1,500 FCFA)</option>
-                            <option value="Consultation Spécialiste">👨‍⚕️ Consultation Spécialiste (2,500 FCFA)</option>
-                            <option value="Consultation d'Urgence">🚨 Consultation d'Urgence (2,000 FCFA)</option>
-                            <option value="Contrôle / Suivi">🔍 Visite de Contrôle (800 FCFA)</option>
+                            <option value="Consultation Générale">🩺 Consultation Générale ({clinicSettings.consultationGeneral?.toLocaleString() || 5000} FCFA)</option>
+                            <option value="Consultation Spécialiste">👨‍⚕️ Consultation Spécialiste ({clinicSettings.consultationSpecialist?.toLocaleString() || 10000} FCFA)</option>
+                            <option value="Consultation d'Urgence">🚨 Consultation d'Urgence ({clinicSettings.consultationEmergency?.toLocaleString() || 7500} FCFA)</option>
+                            <option value="Contrôle / Suivi">🔍 Visite de Contrôle ({clinicSettings.consultationControl?.toLocaleString() || 3000} FCFA)</option>
                           </select>
                         </div>
                         <div>

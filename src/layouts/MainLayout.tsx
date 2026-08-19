@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../hooks/useLanguage';
 import { ClinicSettingsModal } from '../components/ClinicSettingsModal';
-import { getClinicSettings, type ClinicSettings } from '../services/clinicSettingsService';
+import { useClinicSettings } from '../services/clinicSettingsService';
 import { cn } from '../utils/cn';
 import {
   LayoutDashboard,
@@ -44,6 +44,7 @@ const navigationItems: Record<UserRole, Array<{ name: string; icon: React.ReactN
     { name: 'Caisse & Factures', icon: <CreditCard className="w-5 h-5" />, tab: 'cashier' },
     { name: 'Historique', icon: <ClipboardList className="w-5 h-5" />, tab: 'history' },
     { name: 'Statistiques', icon: <BarChart3 className="w-5 h-5" />, tab: 'stats' },
+    { name: 'Paramètres', icon: <Settings className="w-5 h-5" />, tab: 'settings' },
   ],
 
   medecin: [
@@ -147,7 +148,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [clinicSettings, setClinicSettings] = useState<ClinicSettings>(getClinicSettings);
+  const { settings: clinicSettings, setSettings: setClinicSettings } = useClinicSettings();
   const notifPanelRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
 
@@ -167,6 +168,10 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   // Gérer les changements d'onglet via CustomEvent
   useEffect(() => {
     const handleTabChange = (event: CustomEvent) => {
+      if (event.detail === 'settings') {
+        setShowSettingsModal(true);
+        return;
+      }
       setActiveTab(event.detail);
     };
     window.addEventListener('changeTab', handleTabChange as EventListener);
@@ -174,6 +179,10 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleNavClick = (tab: string) => {
+    if (tab === 'settings') {
+      setShowSettingsModal(true);
+      return;
+    }
     setActiveTab(tab);
     window.dispatchEvent(new CustomEvent('changeTab', { detail: tab }));
   };

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Settings, Stethoscope, Bed, Building2, CheckCircle2, Upload, Trash2 } from 'lucide-react';
+import { Settings, Stethoscope, Bed, Building2, CheckCircle2, Upload, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import {
   ModalShell,
   FormSection,
@@ -8,7 +8,7 @@ import {
   CancelButton,
   SubmitButton,
 } from './ModalShell';
-import { getClinicSettings, saveClinicSettings, type ClinicSettings } from '../services/clinicSettingsService';
+import { getClinicSettings, saveClinicSettings, compressImageToDataUrl, type ClinicSettings } from '../services/clinicSettingsService';
 
 interface ClinicSettingsModalProps {
   onClose: () => void;
@@ -18,35 +18,57 @@ interface ClinicSettingsModalProps {
 export function ClinicSettingsModal({ onClose, onSaved }: ClinicSettingsModalProps) {
   const [settings, setSettings] = useState<ClinicSettings>(getClinicSettings);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [compressingLogo, setCompressingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleLogoFile = (file: File) => {
+  const handleLogoFile = async (file: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       alert('Veuillez sélectionner un fichier image valide (PNG, JPG, SVG, WebP).');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      alert('La taille du logo ne doit pas dépasser 5 Mo.');
+    if (file.size > 10 * 1024 * 1024) {
+      alert('La taille du fichier image ne doit pas dépasser 10 Mo.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setSettings(prev => ({ ...prev, logoUrl: e.target!.result as string }));
-      }
-    };
-    reader.readAsDataURL(file);
+
+    try {
+      setCompressingLogo(true);
+      setErrorMsg(null);
+      // Compression de l'image (max 300x300 pour le logo d'entête/reçu)
+      const compressedDataUrl = await compressImageToDataUrl(file, 300, 300, 0.85);
+      setSettings(prev => ({ ...prev, logoUrl: compressedDataUrl }));
+    } catch (err: any) {
+      console.error('Erreur compression logo:', err);
+      alert('Impossible de traiter cette image. Veuillez en choisir une autre.');
+    } finally {
+      setCompressingLogo(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    saveClinicSettings(settings);
-    setSavedSuccess(true);
-    if (onSaved) onSaved(settings);
-    setTimeout(() => {
-      onClose();
-    }, 600);
+    setSaving(true);
+    setErrorMsg(null);
+
+    try {
+      const result = await saveClinicSettings(settings);
+      if (result.success) {
+        setSavedSuccess(true);
+        if (onSaved) onSaved(settings);
+        setTimeout(() => {
+          onClose();
+        }, 600);
+      } else {
+        setErrorMsg(result.error || 'Erreur lors de la sauvegarde sur le serveur Supabase.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Erreur inattendue.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -60,14 +82,35 @@ export function ClinicSettingsModal({ onClose, onSaved }: ClinicSettingsModalPro
       footer={
         <>
           <CancelButton onClick={onClose} />
-          <SubmitButton color="purple">
-            <CheckCircle2 className="w-4 h-4" />
-            {savedSuccess ? 'Modifications Enregistrées !' : 'Enregistrer les Tarifs & Paramètres'}
+          <SubmitButton color="purple" disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Enregistrement en cours...
+              </>
+            ) : savedSuccess ? (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                Modifications Enregistrées !
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                Enregistrer les Tarifs & Paramètres
+              </>
+            )}
           </SubmitButton>
         </>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {errorMsg && (
+          <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-red-700 text-xs font-semibold">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500 mt-0.5" />
+            <div className="flex-1">{errorMsg}</div>
+          </div>
+        )}
+
         {/* ─── SECTION 1: INFOS & LOGO CLINIQUE ─────────────────────────────── */}
         <FormSection title="1. Identité de la Clinique & Localisation" icon={<Building2 className="w-4 h-4 text-purple-600" />}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -76,6 +119,7 @@ export function ClinicSettingsModal({ onClose, onSaved }: ClinicSettingsModalPro
                 accent="purple"
                 value={settings.clinicName}
                 onChange={e => setSettings({ ...settings, clinicName: e.target.value })}
+                required
               />
             </FormField>
             <FormField label="Téléphone Officiel">
@@ -141,13 +185,17 @@ export function ClinicSettingsModal({ onClose, onSaved }: ClinicSettingsModalPro
                 <div className="flex items-center gap-4 flex-wrap sm:flex-nowrap">
                   {/* Aperçu du Logo */}
                   <div className="relative w-20 h-20 rounded-2xl bg-white shadow-md border border-slate-200 p-2 flex items-center justify-center flex-shrink-0 overflow-hidden group">
-                    <img
-                      src={settings.logoUrl || '/logo.jpg'}
-                      alt="Logo Clinique"
-                      className="w-full h-full object-contain"
-                      onError={(e) => { (e.target as any).src = '/logo.jpg'; }}
-                    />
-                    {settings.logoUrl && settings.logoUrl !== '/logo.jpg' && (
+                    {compressingLogo ? (
+                      <Loader2 className="w-6 h-6 text-purple-600 animate-spin" />
+                    ) : (
+                      <img
+                        src={settings.logoUrl || '/logo.jpg'}
+                        alt="Logo Clinique"
+                        className="w-full h-full object-contain"
+                        onError={(e) => { (e.target as any).src = '/logo.jpg'; }}
+                      />
+                    )}
+                    {settings.logoUrl && settings.logoUrl !== '/logo.jpg' && !compressingLogo && (
                       <span className="absolute bottom-1 right-1 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white" title="Logo personnalisé actif" />
                     )}
                   </div>
@@ -168,11 +216,12 @@ export function ClinicSettingsModal({ onClose, onSaved }: ClinicSettingsModalPro
                       />
                       <button
                         type="button"
+                        disabled={compressingLogo}
                         onClick={() => fileInputRef.current?.click()}
-                        className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                        className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
                       >
                         <Upload className="w-3.5 h-3.5" />
-                        Choisir une Photo / Logo
+                        {compressingLogo ? 'Traitement...' : 'Choisir une Photo / Logo'}
                       </button>
 
                       {settings.logoUrl && settings.logoUrl !== '/logo.jpg' && (
@@ -188,7 +237,7 @@ export function ClinicSettingsModal({ onClose, onSaved }: ClinicSettingsModalPro
                     </div>
 
                     <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                      Cliquez sur <strong>Choisir une Photo</strong> ou glissez-déposez votre logo (PNG, JPG, SVG). Il sera affiché sur l'application et imprimé sur tous vos <strong>reçus de caisse</strong> et <strong>dossiers médicaux</strong>.
+                      Cliquez sur <strong>Choisir une Photo</strong> ou glissez-déposez votre logo (PNG, JPG, SVG). Il sera compressé automatiquement et affiché sur tous vos <strong>reçus de caisse</strong> et <strong>dossiers médicaux</strong>.
                     </p>
                   </div>
                 </div>

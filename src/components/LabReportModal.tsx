@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { ModalPortal } from './ModalShell';
 import { Printer, X, FlaskConical, ShieldCheck } from 'lucide-react';
-import { getClinicSettings } from '../services/clinicSettingsService';
+import { useClinicSettings } from '../services/clinicSettingsService';
 import type { LabTest } from '../types';
 
 
@@ -12,7 +12,7 @@ interface LabReportModalProps {
 
 export function LabReportModal({ test, onClose }: LabReportModalProps) {
   const reportRef = useRef<HTMLDivElement>(null);
-  const clinicSettings = getClinicSettings();
+  const { settings: clinicSettings } = useClinicSettings();
 
   const patientName = test.patient
     ? `${test.patient.first_name} ${test.patient.last_name || test.patient.name}`

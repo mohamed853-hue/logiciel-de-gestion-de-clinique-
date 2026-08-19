@@ -54,16 +54,28 @@ INSERT INTO public.clinic_settings (
     15000, 10000, 25000, 40000, 7500
 ) ON CONFLICT (id) DO NOTHING;
 
+-- Permissions pour les rôles Supabase
+GRANT ALL ON TABLE public.clinic_settings TO anon, authenticated, service_role;
+
 -- Activation de la sécurité RLS (Row Level Security)
 ALTER TABLE public.clinic_settings ENABLE ROW LEVEL SECURITY;
 
--- Politiques de lecture et d'écriture pour l'application
+-- Politiques de lecture et d'écriture complètes pour l'application
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow public read clinic_settings') THEN
-        CREATE POLICY "Allow public read clinic_settings" ON public.clinic_settings FOR SELECT USING (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow public write clinic_settings') THEN
-        CREATE POLICY "Allow public write clinic_settings" ON public.clinic_settings FOR ALL USING (true);
-    END IF;
+    DROP POLICY IF EXISTS "Allow public read clinic_settings" ON public.clinic_settings;
+    DROP POLICY IF EXISTS "Allow public write clinic_settings" ON public.clinic_settings;
+    DROP POLICY IF EXISTS "Allow public insert clinic_settings" ON public.clinic_settings;
+    DROP POLICY IF EXISTS "Allow public update clinic_settings" ON public.clinic_settings;
+
+    CREATE POLICY "Allow public read clinic_settings" 
+        ON public.clinic_settings 
+        FOR SELECT 
+        USING (true);
+
+    CREATE POLICY "Allow public write clinic_settings" 
+        ON public.clinic_settings 
+        FOR ALL 
+        USING (true)
+        WITH CHECK (true);
 END $$;

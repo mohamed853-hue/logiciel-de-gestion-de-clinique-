@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { ModalPortal } from './ModalShell';
 import { Printer, Download, X, CheckCircle2 } from 'lucide-react';
-import { getClinicSettings } from '../services/clinicSettingsService';
+import { useClinicSettings } from '../services/clinicSettingsService';
 
 export interface ReceiptItem {
   description: string;
@@ -68,7 +68,7 @@ export function Receipt({
   onDownload
 }: ReceiptProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
-  const clinicSettings = getClinicSettings();
+  const { settings: clinicSettings } = useClinicSettings();
 
   const displayRef = receipt?.reference || receipt?.number || reference || `REC-${Date.now().toString().slice(-6)}`;
   const displayPatientName = receipt?.patientName || patientName || 'Client Comptoir';
