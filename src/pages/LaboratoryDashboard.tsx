@@ -764,6 +764,8 @@ export function LaboratoryDashboard() {
                 loading={savingResult}
                 loadingText="Validation en cours..."
                 color="purple"
+                onClick={handleSaveResultSubmit}
+                form="lab-result-form"
               >
                 <CheckCircle className="w-4 h-4" />
                 Valider &amp; Émettre le Bulletin Officiel
@@ -771,7 +773,7 @@ export function LaboratoryDashboard() {
             </>
           }
         >
-          <form onSubmit={handleSaveResultSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+          <form id="lab-result-form" onSubmit={handleSaveResultSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
             {/* Info prescription */}
             <div className="p-3.5 bg-gradient-to-r from-purple-50 to-pink-50/30 rounded-2xl border border-purple-100 text-xs">
               <div className="flex justify-between items-center flex-wrap gap-2">

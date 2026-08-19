@@ -340,6 +340,8 @@ interface SubmitButtonProps {
   label?: string;
   disabled?: boolean;
   onClick?: (e?: any) => void;
+  form?: string;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 const SUBMIT_COLORS: Record<string, string> = {
@@ -353,11 +355,12 @@ const SUBMIT_COLORS: Record<string, string> = {
   amber:   'from-amber-500 via-amber-600 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-amber-500/25',
 };
 
-export function SubmitButton({ loading, loadingText = 'Traitement...', color = 'blue', children, label, disabled, onClick }: SubmitButtonProps) {
+export function SubmitButton({ loading, loadingText = 'Traitement...', color = 'blue', children, label, disabled, onClick, form, type }: SubmitButtonProps) {
   const colors = SUBMIT_COLORS[color] || SUBMIT_COLORS.blue;
   return (
     <button
-      type={onClick ? 'button' : 'submit'}
+      type={type || (onClick ? 'button' : 'submit')}
+      form={form}
       onClick={onClick}
       disabled={loading || disabled}
       className={cn(

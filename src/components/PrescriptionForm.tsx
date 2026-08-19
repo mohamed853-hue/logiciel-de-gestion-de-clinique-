@@ -210,6 +210,8 @@ export function PrescriptionForm({ patient, onClose, onSuccess }: PrescriptionFo
             loading={loading}
             loadingText="Enregistrement..."
             color="blue"
+            onClick={handleSubmit}
+            form="prescription-form"
           >
             <FileText className="w-4 h-4" />
             Valider &amp; Envoyer en Pharmacie

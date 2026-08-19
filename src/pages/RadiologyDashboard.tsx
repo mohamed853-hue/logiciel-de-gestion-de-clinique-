@@ -418,13 +418,15 @@ export function RadiologyDashboard() {
                 loadingText="Enregistrement..."
                 color="indigo"
                 disabled={!resultText.trim()}
+                onClick={handleSaveResult}
+                form="radiology-result-form"
               >
                 Valider le Compte-Rendu
               </SubmitButton>
             </>
           }
         >
-          <form onSubmit={handleSaveResult} className="space-y-4">
+          <form id="radiology-result-form" onSubmit={handleSaveResult} className="space-y-4">
             <div className="bg-indigo-50/70 rounded-2xl p-4 border border-indigo-100 flex items-center justify-between">
               <div>
                 <p className="font-extrabold text-slate-800 text-sm">{resultModal.patient_name}</p>

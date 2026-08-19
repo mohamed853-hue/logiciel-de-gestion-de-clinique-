@@ -210,6 +210,8 @@ export function AppointmentModal({
             loading={loading}
             loadingText={isEditing ? 'Mise à jour en cours...' : 'Planification du RDV...'}
             color="purple"
+            onClick={handleSubmit}
+            form="appointment-form"
           >
             <CheckCircle2 className="w-4 h-4" />
             {isEditing ? 'Enregistrer les Modifications' : 'Confirmer & Planifier le RDV'}
@@ -217,7 +219,7 @@ export function AppointmentModal({
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form id="appointment-form" onSubmit={handleSubmit} className="space-y-4">
         {errorMsg && <ModalErrorAlert message={errorMsg} />}
 
         {/* ─── BANNIÈRE RÉCAPITULATIVE EN DIRECT ──────────────────────────────── */}

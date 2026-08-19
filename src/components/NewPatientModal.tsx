@@ -83,10 +83,16 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
+    console.log('[NewPatientModal] handleSubmit déclenché ! Données saisies :', formData);
+
     if (!formData.first_name.trim() || !formData.phone.trim()) {
-      setErrorMsg('Veuillez renseigner au moins le prénom et le numéro de téléphone.');
+      const msg = 'Veuillez renseigner au moins le prénom et le numéro de téléphone.';
+      console.warn('[NewPatientModal] Validation échouée :', msg);
+      setErrorMsg(msg);
       return;
     }
 
@@ -98,11 +104,14 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
       const patientId = crypto.randomUUID();
       const fullName = `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim() || formData.first_name.trim();
 
-      // 1. Enregistrer l'accompagnant dans la table accompaniers si présente
+      console.log('[NewPatientModal] ID généré pour le nouveau patient :', patientId, '| Nom complet :', fullName);
+
+      // 1. Enregistrer l'accompagnant dans la table accompaniers si cochée
       let createdAccompanierId: string | null = null;
       if (formData.is_accompanied && (formData.accompanier_first_name.trim() || formData.accompanier_last_name.trim() || formData.accompanier_phone.trim())) {
         try {
           const accId = crypto.randomUUID();
+          console.log('[NewPatientModal] Tentative d\'enregistrement de l\'accompagnant :', accId);
           const { error: accErr } = await supabase.from('accompaniers').insert([
             {
               id: accId,
@@ -115,9 +124,12 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
           ]);
           if (!accErr) {
             createdAccompanierId = accId;
+            console.log('[NewPatientModal] Accompagnant enregistré avec succès, ID :', accId);
+          } else {
+            console.warn('[NewPatientModal] Note table accompaniers (ignoré sans bloquer) :', accErr.message);
           }
-        } catch {
-          // Table accompaniers optionnelle
+        } catch (e: any) {
+          console.warn('[NewPatientModal] Note table accompaniers :', e?.message);
         }
       }
 
@@ -126,6 +138,7 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
       const baseSex = formData.sex || 'M';
       const baseBlood = formData.blood || 'Non renseigné';
       const baseAllergies = formData.allergies.trim() || 'Aucune';
+      const baseAddress = formData.address.trim() || null;
 
       // Palier 1 : Schéma enrichi complet
       const fullPatientData: any = {
@@ -139,11 +152,11 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
         phone: formData.phone.trim(),
         blood: baseBlood,
         allergies: baseAllergies,
-        address: formData.address.trim() || null,
+        address: baseAddress,
         city: formData.city.trim() || null,
         country: formData.country || 'Algérie',
-        visit_reason: formData.visit_reason,
-        arrival_status: formData.arrival_status,
+        visit_reason: formData.visit_reason || 'Consultation',
+        arrival_status: formData.arrival_status || 'stable',
         arrival_at: now.toISOString(),
         arrival_time: now.toISOString(),
         // Accompagnant
@@ -163,13 +176,15 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
         created_at: now.toISOString(),
       };
 
+      console.log('[NewPatientModal] Envoi du Palier 1 vers Supabase :', fullPatientData);
+
       let { data: newPatients, error } = await supabase
         .from('patients')
         .insert([fullPatientData])
         .select();
 
       if (error) {
-        console.warn('Palier 1 échoué, essai du palier 2 (schéma standard):', error.message);
+        console.warn('[NewPatientModal] Palier 1 échoué, essai du palier 2 (schéma standard):', error.message);
         // Palier 2 : Schéma standard
         const standardData: any = {
           id: patientId,
@@ -182,11 +197,11 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
           phone: formData.phone.trim(),
           blood: baseBlood,
           allergies: baseAllergies,
-          address: formData.address.trim() || null,
+          address: baseAddress,
           city: formData.city.trim() || null,
           country: formData.country || 'Algérie',
-          visit_reason: formData.visit_reason,
-          arrival_status: formData.arrival_status,
+          visit_reason: formData.visit_reason || 'Consultation',
+          arrival_status: formData.arrival_status || 'stable',
           arrival_at: now.toISOString(),
           is_accompanied: formData.is_accompanied,
           accompanier_id: createdAccompanierId,
@@ -196,7 +211,7 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
 
         const res2 = await supabase.from('patients').insert([standardData]).select();
         if (res2.error) {
-          console.warn('Palier 2 échoué, essai du palier 3 (schéma minimal garanti):', res2.error.message);
+          console.warn('[NewPatientModal] Palier 2 échoué, essai du palier 3 (schéma minimal garanti):', res2.error.message);
           // Palier 3 : Schéma minimal garanti
           const minimalData: any = {
             id: patientId,
@@ -206,18 +221,26 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
             phone: formData.phone.trim(),
             blood: baseBlood,
             allergies: baseAllergies,
-            address: formData.address.trim() || null,
+            address: baseAddress || 'Non renseignée',
             created_at: now.toISOString(),
           };
           const res3 = await supabase.from('patients').insert([minimalData]).select();
-          if (res3.error) throw res3.error;
+          if (res3.error) {
+            console.error('[NewPatientModal] Erreur fatale sur les 3 paliers :', res3.error);
+            throw res3.error;
+          }
           newPatients = res3.data;
+          console.log('[NewPatientModal] Palier 3 réussi !');
         } else {
           newPatients = res2.data;
+          console.log('[NewPatientModal] Palier 2 réussi !');
         }
+      } else {
+        console.log('[NewPatientModal] Palier 1 réussi avec succès !');
       }
 
       const createdPatient = newPatients?.[0] || { id: patientId, name: fullName, first_name: formData.first_name.trim(), last_name: formData.last_name.trim() };
+      console.log('[NewPatientModal] Patient final créé :', createdPatient);
 
       // 3. Si femme enceinte, enregistrer dans la table pregnancies
       if (formData.sex === 'F' && formData.is_pregnant && createdPatient) {
@@ -277,10 +300,11 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
       }
 
       setLoading(false);
+      console.log('[NewPatientModal] Opération terminée, fermeture du modal.');
       if (onSuccess) onSuccess();
       onClose();
     } catch (err: any) {
-      console.error('Error creating patient:', err);
+      console.error('[NewPatientModal] Erreur lors de la création du patient :', err);
       setErrorMsg(err.message || 'Erreur lors de la création du dossier patient');
       setLoading(false);
     }
@@ -301,6 +325,8 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
             loading={loading}
             loadingText="Création du dossier..."
             color="blue"
+            onClick={handleSubmit}
+            form="new-patient-form"
           >
             <CheckCircle2 className="w-4 h-4" />
             Créer & Enregistrer le Dossier
@@ -308,7 +334,7 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-3.5">
+      <form id="new-patient-form" onSubmit={handleSubmit} className="space-y-3.5">
         {errorMsg && <ModalErrorAlert message={errorMsg} />}
 
         {/* ─── BANNIÈRE APERÇU DU DOSSIER ────────────────────────────────────── */}

@@ -82,7 +82,7 @@ export function ClinicSettingsModal({ onClose, onSaved }: ClinicSettingsModalPro
       footer={
         <>
           <CancelButton onClick={onClose} />
-          <SubmitButton color="purple" disabled={saving}>
+          <SubmitButton color="purple" disabled={saving} onClick={handleSubmit} form="clinic-settings-form">
             {saving ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -103,7 +103,7 @@ export function ClinicSettingsModal({ onClose, onSaved }: ClinicSettingsModalPro
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form id="clinic-settings-form" onSubmit={handleSubmit} className="space-y-4">
         {errorMsg && (
           <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-red-700 text-xs font-semibold">
             <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500 mt-0.5" />

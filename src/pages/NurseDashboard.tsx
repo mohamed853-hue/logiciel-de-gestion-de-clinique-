@@ -383,13 +383,13 @@ export function NurseDashboard() {
           footer={
             <>
               <CancelButton onClick={() => setShowVitalsForm(false)} />
-              <SubmitButton color="teal">
+              <SubmitButton color="teal" onClick={handleSaveVitals} form="vitals-form">
                 Enregistrer dans le Dossier
               </SubmitButton>
             </>
           }
         >
-          <form onSubmit={handleSaveVitals} className="space-y-4">
+          <form id="vitals-form" onSubmit={handleSaveVitals} className="space-y-4">
             <div className="grid grid-cols-2 gap-3.5">
               <FormField label="Tension Artérielle (TA)">
                 <ModalInput

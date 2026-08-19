@@ -365,6 +365,8 @@ export function LabRequestForm({ patient, onClose, onSuccess }: LabRequestFormPr
             loadingText="Transmission au Laboratoire..."
             color="purple"
             disabled={selectedTests.length === 0}
+            onClick={handleSubmit}
+            form="lab-request-form"
           >
             <FlaskConical className="w-4 h-4" />
             {selectedTests.length > 0
@@ -374,7 +376,7 @@ export function LabRequestForm({ patient, onClose, onSuccess }: LabRequestFormPr
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+      <form id="lab-request-form" onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
         {errorMsg && <ModalErrorAlert message={errorMsg} />}
 
         {/* ─── EN-TÊTE PATIENT & STATUT D'URGENCE ──────────────────────────────── */}

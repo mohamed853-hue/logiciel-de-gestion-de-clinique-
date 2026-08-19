@@ -1,15 +1,21 @@
 -- =============================================================================
--- AL SHIFA — MISE À JOUR PATIENTS & ACCOMPAGNANTS
+-- AL SHIFA — MISE À JOUR PATIENTS & ACCOMPAGNANTS (ULTRA-PERMISSIF & COMPLET)
 -- Exécutez ce script dans l'éditeur SQL de Supabase (SQL Editor)
 -- =============================================================================
 
--- 1. Assouplir les contraintes NOT NULL sur la table patients (pour éviter tout échec)
+-- 1. Assouplir toutes les contraintes NOT NULL sur la table patients (seuls nom/prénom/tél peuvent être nécessaires)
 ALTER TABLE public.patients 
   ALTER COLUMN age DROP NOT NULL,
   ALTER COLUMN sex DROP NOT NULL,
-  ALTER COLUMN blood DROP NOT NULL;
+  ALTER COLUMN blood DROP NOT NULL,
+  ALTER COLUMN allergies DROP NOT NULL,
+  ALTER COLUMN address DROP NOT NULL;
 
--- 2. Ajouter toutes les colonnes enrichies à la table patients
+-- S'assurer que id a une valeur par défaut automatique si non fournie
+ALTER TABLE public.patients
+  ALTER COLUMN id SET DEFAULT gen_random_uuid()::text;
+
+-- 2. Ajouter toutes les colonnes enrichies à la table patients si absentes
 ALTER TABLE public.patients
   ADD COLUMN IF NOT EXISTS first_name TEXT,
   ADD COLUMN IF NOT EXISTS last_name TEXT,
@@ -56,9 +62,12 @@ CREATE TABLE IF NOT EXISTS public.accompaniers (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- RLS permissive pour les accompagnants
-ALTER TABLE public.accompaniers ENABLE ROW LEVEL SECURITY;
+-- RLS permissive pour patients et accompagnants
+ALTER TABLE public.patients ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all access to patients" ON public.patients;
+CREATE POLICY "Allow all access to patients" ON public.patients FOR ALL USING (true);
 
+ALTER TABLE public.accompaniers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all access to accompaniers" ON public.accompaniers;
 CREATE POLICY "Allow all access to accompaniers" ON public.accompaniers FOR ALL USING (true);
 
@@ -72,5 +81,5 @@ CREATE INDEX IF NOT EXISTS idx_patients_arrival_status ON public.patients(arriva
 -- Rapport
 DO $$
 BEGIN
-  RAISE NOTICE '✅ Table patients et accompaniers mises à jour avec succès !';
+  RAISE NOTICE '✅ Table patients et accompaniers configurées avec succès !';
 END $$;
