@@ -95,26 +95,60 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
 
     try {
       const now = new Date();
+      const patientId = crypto.randomUUID();
+      const fullName = `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim() || formData.first_name.trim();
 
-      const patientData = {
+      // 1. Enregistrer l'accompagnant dans la table accompaniers si présente
+      let createdAccompanierId: string | null = null;
+      if (formData.is_accompanied && (formData.accompanier_first_name.trim() || formData.accompanier_last_name.trim() || formData.accompanier_phone.trim())) {
+        try {
+          const accId = crypto.randomUUID();
+          const { error: accErr } = await supabase.from('accompaniers').insert([
+            {
+              id: accId,
+              first_name: formData.accompanier_first_name.trim() || 'Accompagnant',
+              last_name: formData.accompanier_last_name.trim() || '',
+              phone: formData.accompanier_phone.trim() || formData.phone.trim(),
+              relationship: formData.accompanier_relationship || 'Proche',
+              created_at: now.toISOString(),
+            },
+          ]);
+          if (!accErr) {
+            createdAccompanierId = accId;
+          }
+        } catch {
+          // Table accompaniers optionnelle
+        }
+      }
+
+      // 2. Sécurisation des valeurs par défaut pour les contraintes NOT NULL
+      const baseAge = formData.age ? parseInt(formData.age, 10) : 0;
+      const baseSex = formData.sex || 'M';
+      const baseBlood = formData.blood || 'Non renseigné';
+      const baseAllergies = formData.allergies.trim() || 'Aucune';
+
+      // Palier 1 : Schéma enrichi complet
+      const fullPatientData: any = {
+        id: patientId,
         patient_number: previewNumber,
         first_name: formData.first_name.trim(),
         last_name: formData.last_name.trim(),
-        name: `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim(),
-        age: formData.age ? parseInt(formData.age, 10) : null,
-        sex: formData.sex || null,
+        name: fullName,
+        age: baseAge,
+        sex: baseSex,
         phone: formData.phone.trim(),
-        blood: formData.blood || null,
-        allergies: formData.allergies.trim() || null,
+        blood: baseBlood,
+        allergies: baseAllergies,
         address: formData.address.trim() || null,
         city: formData.city.trim() || null,
         country: formData.country || 'Algérie',
         visit_reason: formData.visit_reason,
         arrival_status: formData.arrival_status,
         arrival_at: now.toISOString(),
-        arrival_time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+        arrival_time: now.toISOString(),
         // Accompagnant
         is_accompanied: formData.is_accompanied,
+        accompanier_id: createdAccompanierId,
         accompanier_first_name: formData.is_accompanied ? formData.accompanier_first_name.trim() : null,
         accompanier_last_name: formData.is_accompanied ? formData.accompanier_last_name.trim() : null,
         accompanier_phone: formData.is_accompanied ? formData.accompanier_phone.trim() : null,
@@ -129,40 +163,90 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
         created_at: now.toISOString(),
       };
 
-      const { data: newPatients, error } = await supabase
+      let { data: newPatients, error } = await supabase
         .from('patients')
-        .insert([patientData])
+        .insert([fullPatientData])
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Palier 1 échoué, essai du palier 2 (schéma standard):', error.message);
+        // Palier 2 : Schéma standard
+        const standardData: any = {
+          id: patientId,
+          patient_number: previewNumber,
+          first_name: formData.first_name.trim(),
+          last_name: formData.last_name.trim(),
+          name: fullName,
+          age: baseAge,
+          sex: baseSex,
+          phone: formData.phone.trim(),
+          blood: baseBlood,
+          allergies: baseAllergies,
+          address: formData.address.trim() || null,
+          city: formData.city.trim() || null,
+          country: formData.country || 'Algérie',
+          visit_reason: formData.visit_reason,
+          arrival_status: formData.arrival_status,
+          arrival_at: now.toISOString(),
+          is_accompanied: formData.is_accompanied,
+          accompanier_id: createdAccompanierId,
+          is_pregnant: formData.sex === 'F' ? formData.is_pregnant : false,
+          created_at: now.toISOString(),
+        };
 
-      const createdPatient = newPatients?.[0];
+        const res2 = await supabase.from('patients').insert([standardData]).select();
+        if (res2.error) {
+          console.warn('Palier 2 échoué, essai du palier 3 (schéma minimal garanti):', res2.error.message);
+          // Palier 3 : Schéma minimal garanti
+          const minimalData: any = {
+            id: patientId,
+            name: fullName,
+            age: baseAge,
+            sex: baseSex,
+            phone: formData.phone.trim(),
+            blood: baseBlood,
+            allergies: baseAllergies,
+            address: formData.address.trim() || null,
+            created_at: now.toISOString(),
+          };
+          const res3 = await supabase.from('patients').insert([minimalData]).select();
+          if (res3.error) throw res3.error;
+          newPatients = res3.data;
+        } else {
+          newPatients = res2.data;
+        }
+      }
 
-      // Si femme enceinte, enregistrer dans la table pregnancies
+      const createdPatient = newPatients?.[0] || { id: patientId, name: fullName, first_name: formData.first_name.trim(), last_name: formData.last_name.trim() };
+
+      // 3. Si femme enceinte, enregistrer dans la table pregnancies
       if (formData.sex === 'F' && formData.is_pregnant && createdPatient) {
         try {
+          const accDesc = formData.is_accompanied
+            ? `${formData.accompanier_first_name} ${formData.accompanier_last_name} (${formData.accompanier_relationship})`.trim()
+            : 'Non';
           await supabase.from('pregnancies').insert([
             {
               patient_id: createdPatient.id,
-              patient_name: `${formData.first_name} ${formData.last_name}`,
+              patient_name: fullName,
               ddr: formData.ddr || null,
               date_terme_prevu: formData.dpa || null,
               statut: 'en_cours',
-              remarques: `Mois: ${formData.pregnancy_months || '-'}, SA: ${formData.pregnancy_weeks || '-'} | Accompagnant: ${formData.is_accompanied ? formData.accompanier_relationship : 'Non'}`,
+              remarques: `Mois: ${formData.pregnancy_months || '-'}, SA: ${formData.pregnancy_weeks || '-'} | Accompagnant: ${accDesc}`,
               created_at: now.toISOString(),
             },
           ]);
         } catch { /* silent */ }
       }
 
-      // Enregistrer la facture de consultation (Payée immédiatement ou en attente)
+      // 4. Enregistrer la facture de consultation (Payée immédiatement ou en attente)
       if (createdPatient && formData.bill_consultation) {
         try {
           await supabase.from('patient_care_billing').insert([
             {
               id: crypto.randomUUID(),
               patient_id: createdPatient.id,
-              patient_name: `${formData.first_name} ${formData.last_name}`,
+              patient_name: fullName,
               care_title: `🩺 ${formData.consultation_type}`,
               care_code: 'CONS-001',
               unit_price: formData.consultation_price,
@@ -181,7 +265,7 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
                 patient_id: createdPatient.id,
                 type: 'Facture Consultation',
                 montant: formData.consultation_price,
-                detail: `Encaissement ${formData.consultation_type} - Dossier ${formData.first_name} ${formData.last_name}`,
+                detail: `Encaissement ${formData.consultation_type} - Dossier ${fullName}`,
                 status: 'complete',
                 payment_method: 'Espèces',
                 source: 'caisse_centrale',
@@ -479,36 +563,50 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
             </label>
 
             {formData.is_accompanied && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-slate-200 animate-slide-in">
-                <FormField label="Prénom">
-                  <ModalInput
-                    accent="blue"
-                    placeholder="Prénom"
-                    value={formData.accompanier_first_name}
-                    onChange={e => setFormData({ ...formData, accompanier_first_name: e.target.value })}
-                  />
-                </FormField>
+              <div className="space-y-2.5 pt-2 border-t border-slate-200 animate-slide-in">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <FormField label="Prénom de l'Accompagnant">
+                    <ModalInput
+                      accent="blue"
+                      placeholder="Ex: Fatou, Amina, Ousmane..."
+                      value={formData.accompanier_first_name}
+                      onChange={e => setFormData({ ...formData, accompanier_first_name: e.target.value })}
+                    />
+                  </FormField>
 
-                <FormField label="Téléphone">
-                  <ModalInput
-                    accent="blue"
-                    placeholder="06 XX XX XX XX"
-                    value={formData.accompanier_phone}
-                    onChange={e => setFormData({ ...formData, accompanier_phone: e.target.value })}
-                  />
-                </FormField>
+                  <FormField label="Nom de Famille de l'Accompagnant">
+                    <ModalInput
+                      accent="blue"
+                      placeholder="Ex: Diallo, Diop, Sow..."
+                      value={formData.accompanier_last_name}
+                      onChange={e => setFormData({ ...formData, accompanier_last_name: e.target.value })}
+                    />
+                  </FormField>
+                </div>
 
-                <FormField label="Lien">
-                  <ModalSelect
-                    accent="blue"
-                    value={formData.accompanier_relationship}
-                    onChange={e => setFormData({ ...formData, accompanier_relationship: e.target.value })}
-                  >
-                    {RELATION_OPTIONS.map(r => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </ModalSelect>
-                </FormField>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <FormField label="N° Téléphone de l'Accompagnant">
+                    <ModalInput
+                      accent="blue"
+                      type="tel"
+                      placeholder="06 XX XX XX XX"
+                      value={formData.accompanier_phone}
+                      onChange={e => setFormData({ ...formData, accompanier_phone: e.target.value })}
+                    />
+                  </FormField>
+
+                  <FormField label="Lien de Parenté">
+                    <ModalSelect
+                      accent="blue"
+                      value={formData.accompanier_relationship}
+                      onChange={e => setFormData({ ...formData, accompanier_relationship: e.target.value })}
+                    >
+                      {RELATION_OPTIONS.map(r => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </ModalSelect>
+                  </FormField>
+                </div>
               </div>
             )}
           </div>

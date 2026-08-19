@@ -2158,7 +2158,10 @@ export function PharmacyModule({
                             </td>
                             <td className="p-3 font-semibold text-slate-700">
                               {s.patient_id
-                                ? patients.find(p => p.id === s.patient_id)?.first_name || 'Patient Enregistré'
+                                ? (() => {
+                                    const p = patients.find(x => x.id === s.patient_id);
+                                    return p ? (p.first_name ? `${p.first_name} ${p.last_name || ''}`.trim() : (p.name || 'Patient Enregistré')) : 'Patient Enregistré';
+                                  })()
                                 : 'Client Comptoir'}
                             </td>
                             <td className="p-3">
@@ -2207,7 +2210,10 @@ export function PharmacyModule({
                                       reference: s.reference,
                                       number: s.reference,
                                       patientName: s.patient_id
-                                        ? patients.find(p => p.id === s.patient_id)?.first_name || 'Patient'
+                                        ? (() => {
+                                            const p = patients.find(x => x.id === s.patient_id);
+                                            return p ? (p.first_name ? `${p.first_name} ${p.last_name || ''}`.trim() : (p.name || 'Patient')) : 'Patient';
+                                          })()
                                         : 'Client Comptoir',
                                       date: s.created_at,
                                       items: s.items?.map(it => ({
@@ -2647,7 +2653,10 @@ export function PharmacyModule({
                           <td className="p-3 text-slate-500">{new Date(s.created_at).toLocaleString('fr-FR')}</td>
                           <td className="p-3 font-semibold text-slate-700">
                             {s.patient_id
-                              ? patients.find(p => p.id === s.patient_id)?.first_name || 'Patient'
+                              ? (() => {
+                                  const p = patients.find(x => x.id === s.patient_id);
+                                  return p ? (p.first_name ? `${p.first_name} ${p.last_name || ''}`.trim() : (p.name || 'Patient')) : 'Patient';
+                                })()
                               : 'Client Comptoir'}
                           </td>
                           <td className="p-3">
@@ -2694,7 +2703,10 @@ export function PharmacyModule({
                                     reference: s.reference,
                                     number: s.reference,
                                     patientName: s.patient_id
-                                      ? patients.find(p => p.id === s.patient_id)?.first_name || 'Patient'
+                                      ? (() => {
+                                          const p = patients.find(x => x.id === s.patient_id);
+                                          return p ? (p.first_name ? `${p.first_name} ${p.last_name || ''}`.trim() : (p.name || 'Patient')) : 'Patient';
+                                        })()
                                       : 'Client Comptoir',
                                     date: s.created_at,
                                     items: s.items?.map(it => ({

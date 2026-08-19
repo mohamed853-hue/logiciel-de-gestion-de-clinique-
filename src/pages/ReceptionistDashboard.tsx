@@ -1566,14 +1566,14 @@ export function ReceptionistDashboard() {
                       <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-black">
-                            {selectedBillingPatient.first_name[0]}
+                            {(selectedBillingPatient.first_name || selectedBillingPatient.name || 'P')[0]?.toUpperCase()}
                           </div>
                           <div>
                             <p className="font-black text-slate-900">
-                              {selectedBillingPatient.first_name} {selectedBillingPatient.last_name || selectedBillingPatient.name}
+                              {selectedBillingPatient.first_name ? `${selectedBillingPatient.first_name} ${selectedBillingPatient.last_name || ''}`.trim() : (selectedBillingPatient.name || 'Patient')}
                             </p>
                             <p className="text-[11px] text-slate-500 font-medium">
-                              Motif : {selectedBillingPatient.visit_reason || 'Consultation'} · Tél : {selectedBillingPatient.phone}
+                              Motif : {selectedBillingPatient.visit_reason || 'Consultation'} · Tél : {selectedBillingPatient.phone || 'N/A'}
                             </p>
                           </div>
                         </div>
