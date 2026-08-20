@@ -1100,15 +1100,17 @@ export function ReceptionistDashboard() {
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white truncate">
-                  Accueil, Caisse & Pharmacie
+                  {isArabic ? 'الاستقبال، الخزينة والصيدلية' : 'Accueil, Caisse & Pharmacie'}
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-500/30 text-blue-200 border border-blue-400/30 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-cyan-300" />
-                  Service Actif
+                  {isArabic ? 'الخدمة نشطة' : 'Service Actif'}
                 </span>
               </div>
               <p className="text-blue-100/70 text-xs mt-0.5 font-medium truncate">
-                Admissions, Facturation Soins & Hospitalisation, Point de Vente Pharmacie & Rendez-vous
+                {isArabic 
+                  ? 'تسجيل المرضى، فوترة الإقامة والعلاجات، نقطة بيع الأدوية وحجز المواعيد'
+                  : 'Admissions, Facturation Soins & Hospitalisation, Point de Vente Pharmacie & Rendez-vous'}
               </p>
             </div>
           </div>
@@ -1120,7 +1122,7 @@ export function ReceptionistDashboard() {
               className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-purple-700 to-violet-800 hover:from-purple-700 hover:to-violet-900 text-white shadow-md shadow-purple-500/25 font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer hover:scale-105 active:scale-95 border border-purple-400/30"
             >
               <Calendar className="w-3.5 h-3.5 text-purple-200" />
-              Planifier RDV
+              {t('btn.schedule_appointment', '+ Planifier RDV')}
             </button>
             <button
               type="button"
@@ -1128,7 +1130,7 @@ export function ReceptionistDashboard() {
               className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/25 font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer hover:scale-105 active:scale-95 border border-blue-400/30"
             >
               <UserPlus className="w-3.5 h-3.5 text-blue-200" />
-              + Nouveau Patient
+              {t('btn.new_patient', '+ Nouveau Patient')}
             </button>
           </div>
         </div>
@@ -1137,20 +1139,20 @@ export function ReceptionistDashboard() {
       {/* ─── BARRE D'ONGLETS RESPONSIVE (SANS DÉBORDEMENT D'ÉCRAN) ───────────── */}
       <div className="bg-slate-900 p-1.5 rounded-2xl shadow-lg border border-slate-800 flex flex-wrap items-center gap-1.5 overflow-hidden">
         {[
-          { id: 'overview', label: 'Tableau de Bord', icon: <Users className="w-4 h-4" />, badge: null, color: 'blue' },
-          { id: 'patients', label: 'Patients', icon: <Users className="w-4 h-4" />, badge: patients.length, color: 'blue' },
-          { id: 'appointments', label: 'Rendez-vous', icon: <Calendar className="w-4 h-4" />, badge: appointments.length, color: 'purple' },
-          { id: 'prescriptions', label: 'Ordonnances', icon: <FileText className="w-4 h-4" />, badge: prescriptions.length, color: 'teal' },
-          { id: 'pharmacy', label: 'Pharmacie & Stock', icon: <ShoppingCart className="w-4 h-4" />, badge: null, color: 'emerald' },
-          { id: 'cashier', label: 'Caisse & Factures', icon: <CreditCard className="w-4 h-4" />, badge: unpaidCareBillsCount > 0 ? `⚠️ ${unpaidCareBillsCount}` : null, color: 'amber' },
-          { id: 'history', label: 'Historique', icon: <History className="w-4 h-4" />, badge: null, color: 'indigo' },
-          { id: 'stats', label: 'Statistiques', icon: <BarChart3 className="w-4 h-4" />, badge: null, color: 'violet' },
-        ].map((t) => {
-          const isActive = activeTab === t.id;
+          { id: 'overview', label: t('nav.overview', 'Tableau de Bord'), icon: <Users className="w-4 h-4" />, badge: null, color: 'blue' },
+          { id: 'patients', label: t('nav.patients', 'Patients'), icon: <Users className="w-4 h-4" />, badge: patients.length, color: 'blue' },
+          { id: 'appointments', label: t('nav.appointments', 'Rendez-vous'), icon: <Calendar className="w-4 h-4" />, badge: appointments.length, color: 'purple' },
+          { id: 'prescriptions', label: t('nav.prescriptions', 'Ordonnances'), icon: <FileText className="w-4 h-4" />, badge: prescriptions.length, color: 'teal' },
+          { id: 'pharmacy', label: t('nav.pharmacy', 'Pharmacie & Stock'), icon: <ShoppingCart className="w-4 h-4" />, badge: null, color: 'emerald' },
+          { id: 'cashier', label: t('nav.cashier', 'Caisse & Factures'), icon: <CreditCard className="w-4 h-4" />, badge: unpaidCareBillsCount > 0 ? `⚠️ ${unpaidCareBillsCount}` : null, color: 'amber' },
+          { id: 'history', label: t('nav.history', 'Historique'), icon: <History className="w-4 h-4" />, badge: null, color: 'indigo' },
+          { id: 'stats', label: t('nav.stats', 'Statistiques'), icon: <BarChart3 className="w-4 h-4" />, badge: null, color: 'violet' },
+        ].map((tItem) => {
+          const isActive = activeTab === tItem.id;
           return (
             <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id as any)}
+              key={tItem.id}
+              onClick={() => setActiveTab(tItem.id as any)}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-2 text-xs font-black rounded-xl transition-all cursor-pointer',
                 isActive
@@ -1158,14 +1160,14 @@ export function ReceptionistDashboard() {
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
               )}
             >
-              {t.icon}
-              <span>{t.label}</span>
-              {t.badge !== null && (
+              {tItem.icon}
+              <span>{tItem.label}</span>
+              {tItem.badge !== null && (
                 <span className={cn(
                   'px-1.5 py-0.2 rounded-full text-[10px] font-black',
                   isActive ? 'bg-white/25 text-white' : 'bg-slate-800 text-slate-300'
                 )}>
-                  {t.badge}
+                  {tItem.badge}
                 </span>
               )}
             </button>

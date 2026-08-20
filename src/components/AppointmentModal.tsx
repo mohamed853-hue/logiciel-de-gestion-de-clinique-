@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, User, FileText, Stethoscope, Sparkles, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../services/supabase';
+import { useLanguage } from '../hooks/useLanguage';
 import type { Patient, Appointment, AppointmentStatus } from '../types';
 import {
   ModalShell,
@@ -29,15 +30,6 @@ const DEFAULT_DOCTORS: DoctorOption[] = [
   { id: 'doc-4', name: 'Dr. Yasmine Khelil', role: 'gynecologue', service: 'Suivi de Grossesse' },
 ];
 
-const VISIT_TYPES = [
-  { value: 'consultation', label: '🩺 Consultation Générale' },
-  { value: 'suivi', label: '📋 Suivi Médical' },
-  { value: 'controle', label: '🔍 Visite de Contrôle' },
-  { value: 'urgence', label: '🚨 Consultation d\'Urgence' },
-  { value: 'gyneco', label: '👶 Consultation Gynéco / Grossesse' },
-  { value: 'analyse', label: '🔬 Bilan / Analyses' },
-];
-
 interface AppointmentModalProps {
   /** Patient pré-sélectionné (optionnel) */
   initialPatient?: Patient;
@@ -54,6 +46,7 @@ export function AppointmentModal({
   onSuccess,
   onClose,
 }: AppointmentModalProps) {
+  const { isArabic } = useLanguage();
   const isEditing = !!appointmentToEdit;
 
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -198,23 +191,23 @@ export function AppointmentModal({
   return (
     <ModalShell
       icon={<Calendar className="w-6 h-6 text-purple-300" />}
-      title={isEditing ? 'Modifier le Rendez-vous' : 'Planifier un Rendez-vous Médical'}
-      subtitle={isEditing ? `Mise à jour du dossier de ${patientDisplayName}` : 'Affectation directe au médecin & notification automatique'}
+      title={isEditing ? (isArabic ? 'تعديل الموعد' : 'Modifier le Rendez-vous') : (isArabic ? 'حجز وجدولة موعد طبي' : 'Planifier un Rendez-vous Médical')}
+      subtitle={isEditing ? (isArabic ? `تحديث موعد ${patientDisplayName}` : `Mise à jour du dossier de ${patientDisplayName}`) : (isArabic ? 'تعيين مباشر للطبيب وإشعار تلقائي' : 'Affectation directe au médecin & notification automatique')}
       color="purple"
       maxWidth="xl"
       onClose={onClose}
       footer={
         <>
-          <CancelButton onClick={onClose} />
+          <CancelButton onClick={onClose} label={isArabic ? 'إلغاء' : 'Annuler'} />
           <SubmitButton
             loading={loading}
-            loadingText={isEditing ? 'Mise à jour en cours...' : 'Planification du RDV...'}
+            loadingText={isEditing ? (isArabic ? 'جاري التحديث...' : 'Mise à jour en cours...') : (isArabic ? 'جاري الحجز...' : 'Planification du RDV...')}
             color="purple"
             onClick={handleSubmit}
             form="appointment-form"
           >
             <CheckCircle2 className="w-4 h-4" />
-            {isEditing ? 'Enregistrer les Modifications' : 'Confirmer & Planifier le RDV'}
+            {isEditing ? (isArabic ? 'حفظ التعديلات' : 'Enregistrer les Modifications') : (isArabic ? 'تأكيد وحجز الموعد' : 'Confirmer & Planifier le RDV')}
           </SubmitButton>
         </>
       }
@@ -230,10 +223,10 @@ export function AppointmentModal({
             </div>
             <div>
               <p className="text-xs text-purple-900 font-extrabold">
-                {patientDisplayName} · <span className="text-purple-600 font-semibold">{doctorName || 'Médecin sélectionné'}</span>
+                {patientDisplayName} · <span className="text-purple-600 font-semibold">{doctorName || (isArabic ? 'الطبيب المختار' : 'Médecin sélectionné')}</span>
               </p>
               <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                Prévu le : <strong className="text-slate-800 font-mono">{appointmentDate ? new Date(appointmentDate).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }) : 'Date non définie'}</strong>
+                {isArabic ? 'الموعد المحدد :' : 'Prévu le :'} <strong className="text-slate-800 font-mono">{appointmentDate ? new Date(appointmentDate).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }) : (isArabic ? 'غير محدد' : 'Date non définie')}</strong>
               </p>
             </div>
           </div>
@@ -244,16 +237,16 @@ export function AppointmentModal({
               priority === 'urgent' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
               'bg-purple-100 text-purple-800 border border-purple-200'
             )}>
-              {priority === 'emergency' ? '🚨 Urgence Vitale' : priority === 'urgent' ? '⚡ Urgent' : '✓ Normal'}
+              {priority === 'emergency' ? (isArabic ? '🚨 حالة حرجة' : '🚨 Urgence Vitale') : priority === 'urgent' ? (isArabic ? '⚡ عاجل' : '⚡ Urgent') : (isArabic ? '✓ عادي' : '✓ Normal')}
             </span>
           </div>
         </div>
 
         {/* ─── SECTION 1: PATIENT & PRATICIEN ─────────────────────────────────── */}
-        <FormSection title="1. Patient & Praticien Référent" icon={<User className="w-4 h-4 text-purple-600" />}>
+        <FormSection title={isArabic ? '1. المريض والطبيب المعالج' : '1. Patient & Praticien Référent'} icon={<User className="w-4 h-4 text-purple-600" />}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Sélection du patient */}
-            <FormField label="Patient Concerné" required>
+            <FormField label={isArabic ? 'المريض المعني' : 'Patient Concerné'} required>
               {initialPatient ? (
                 <div className="p-3 bg-purple-50/70 rounded-xl border border-purple-200 font-bold text-slate-800 text-xs sm:text-sm flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -273,10 +266,10 @@ export function AppointmentModal({
                   value={patientId}
                   onChange={e => setPatientId(e.target.value)}
                 >
-                  <option value="">-- Sélectionner le patient --</option>
+                  <option value="">{isArabic ? '-- اختر المريض --' : '-- Sélectionner le patient --'}</option>
                   {patients.map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.first_name} {p.last_name || p.name} ({p.phone || 'Sans tél'})
+                      {p.first_name} {p.last_name || p.name} ({p.phone || (isArabic ? 'بدون هاتف' : 'Sans tél')})
                     </option>
                   ))}
                 </ModalSelect>
@@ -284,7 +277,7 @@ export function AppointmentModal({
             </FormField>
 
             {/* Médecin / Soignant */}
-            <FormField label="Médecin / Spécialiste" required>
+            <FormField label={isArabic ? 'الطبيب / الأخصائي' : 'Médecin / Spécialiste'} required>
               <ModalSelect
                 accent="purple"
                 required
@@ -295,10 +288,10 @@ export function AppointmentModal({
                   setDoctorName(doc ? doc.name : e.target.value);
                 }}
               >
-                <option value="">-- Choisir un médecin --</option>
+                <option value="">{isArabic ? '-- اختر الطبيب --' : '-- Choisir un médecin --'}</option>
                 {doctorsList.map(d => (
                   <option key={d.id} value={d.id}>
-                    {d.name} · {d.service || (d.role === 'gynecologue' ? 'Gynécologie' : 'Médecine Générale')}
+                    {d.name} · {d.service || (d.role === 'gynecologue' ? (isArabic ? 'طب النساء والتوليد' : 'Gynécologie') : (isArabic ? 'طب عام' : 'Médecine Générale'))}
                   </option>
                 ))}
               </ModalSelect>
@@ -314,20 +307,20 @@ export function AppointmentModal({
                 </div>
                 <div>
                   <p className="font-extrabold text-slate-800">{selectedDoctorObj.name}</p>
-                  <p className="text-[11px] text-slate-500 font-medium">{selectedDoctorObj.service || 'Médecine'}</p>
+                  <p className="text-[11px] text-slate-500 font-medium">{selectedDoctorObj.service || (isArabic ? 'القسم الطبي' : 'Médecine')}</p>
                 </div>
               </div>
               <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-extrabold flex items-center gap-1">
-                <Sparkles className="w-3 h-3" /> Disponible
+                <Sparkles className="w-3 h-3" /> {isArabic ? 'متاح' : 'Disponible'}
               </span>
             </div>
           )}
         </FormSection>
 
         {/* ─── SECTION 2: PROGRAMMATION & PRIORITÉ ────────────────────────────── */}
-        <FormSection title="2. Date, Créneau & Priorité d'Accueil" icon={<Clock className="w-4 h-4 text-purple-600" />}>
+        <FormSection title={isArabic ? '2. الموعد ونوع الفحص والأولوية' : "2. Date, Créneau & Priorité d'Accueil"} icon={<Clock className="w-4 h-4 text-purple-600" />}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="Date & Heure du Rendez-vous" required hint="Créneau réservé dans l'agenda du médecin.">
+            <FormField label={isArabic ? 'تاريخ ووقت الموعد' : "Date & Heure du Rendez-vous"} required hint={isArabic ? 'حجز خانة في جدول الطبيب' : "Créneau réservé dans l'agenda du médecin."}>
               <ModalInput
                 accent="purple"
                 type="datetime-local"
@@ -337,15 +330,18 @@ export function AppointmentModal({
               />
             </FormField>
 
-            <FormField label="Type de Consultation" required>
+            <FormField label={isArabic ? 'نوع الاستشارة' : "Type de Consultation"} required>
               <ModalSelect
                 accent="purple"
                 value={visitType}
                 onChange={e => setVisitType(e.target.value)}
               >
-                {VISIT_TYPES.map(v => (
-                  <option key={v.value} value={v.value}>{v.label}</option>
-                ))}
+                <option value="consultation">🩺 {isArabic ? 'استشارة طبية عامة' : 'Consultation Générale'}</option>
+                <option value="suivi">📋 {isArabic ? 'متابعة دورية' : 'Suivi Médical'}</option>
+                <option value="controle">🔍 {isArabic ? 'فحص مراقبة' : 'Visite de Contrôle'}</option>
+                <option value="urgence">🚨 {isArabic ? 'حالة استعجالية' : 'Consultation d\'Urgence'}</option>
+                <option value="gyneco">👶 {isArabic ? 'استشارة نساء / حمل' : 'Consultation Gynéco / Grossesse'}</option>
+                <option value="analyse">🔬 {isArabic ? 'فحوصات وتحاليل' : 'Bilan / Analyses'}</option>
               </ModalSelect>
             </FormField>
           </div>
@@ -353,13 +349,13 @@ export function AppointmentModal({
           {/* Sélecteur de priorité tactile */}
           <div className="pt-2">
             <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">
-              Niveau de Priorité
+              {isArabic ? 'درجة الأولوية' : 'Niveau de Priorité'}
             </label>
             <div className="grid grid-cols-3 gap-2.5">
               {[
-                { id: 'normal', label: 'Normal', icon: '✓', color: 'border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100' },
-                { id: 'urgent', label: '⚡ Urgent', icon: '⚡', color: 'border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100' },
-                { id: 'emergency', label: '🚨 Urgence Vitale', icon: '🚨', color: 'border-rose-500 bg-rose-50 text-rose-800 hover:bg-rose-100' },
+                { id: 'normal', label: isArabic ? 'عادي' : 'Normal', icon: '✓', color: 'border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100' },
+                { id: 'urgent', label: isArabic ? '⚡ عاجل' : '⚡ Urgent', icon: '⚡', color: 'border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100' },
+                { id: 'emergency', label: isArabic ? '🚨 حالة حرجة' : '🚨 Urgence Vitale', icon: '🚨', color: 'border-rose-500 bg-rose-50 text-rose-800 hover:bg-rose-100' },
               ].map(p => (
                 <button
                   key={p.id}
@@ -381,17 +377,17 @@ export function AppointmentModal({
           {/* Statut si mode édition */}
           {isEditing && (
             <div className="pt-2">
-              <FormField label="Statut du Rendez-vous">
+              <FormField label={isArabic ? 'حالة الموعد' : "Statut du Rendez-vous"}>
                 <ModalSelect
                   accent="purple"
                   value={status}
                   onChange={e => setStatus(e.target.value as AppointmentStatus)}
                 >
-                  <option value="planifie">🗓️ Planifié</option>
-                  <option value="confirme">✅ Confirmé</option>
-                  <option value="termine">🏁 Terminé / Effectué</option>
-                  <option value="annule">❌ Annulé</option>
-                  <option value="reporte">⏳ Reporté</option>
+                  <option value="planifie">🗓️ {isArabic ? 'مبرمج / مجدول' : 'Planifié'}</option>
+                  <option value="confirme">✅ {isArabic ? 'مؤكد' : 'Confirmé'}</option>
+                  <option value="termine">🏁 {isArabic ? 'مكتمل / منجز' : 'Terminé / Effectué'}</option>
+                  <option value="annule">❌ {isArabic ? 'ملغى' : 'Annulé'}</option>
+                  <option value="reporte">⏳ {isArabic ? 'مؤجل' : 'Reporté'}</option>
                 </ModalSelect>
               </FormField>
             </div>
@@ -399,11 +395,11 @@ export function AppointmentModal({
         </FormSection>
 
         {/* ─── SECTION 3: INSTRUCTIONS & REMARQUES ─────────────────────────────── */}
-        <FormSection title="3. Remarques Cliniques & Instructions d'Accueil" icon={<FileText className="w-4 h-4 text-purple-600" />}>
+        <FormSection title={isArabic ? '3. ملاحظات وتعليمات الاستقبال' : "3. Remarques Cliniques & Instructions d'Accueil"} icon={<FileText className="w-4 h-4 text-purple-600" />}>
           <ModalTextarea
             accent="purple"
             rows={3}
-            placeholder="Motif de consultation, documents ou bilans à apporter, précautions particulières..."
+            placeholder={isArabic ? 'سبب الزيارة، وثائق مطلوبة، احتياطات خاصة...' : "Motif de consultation, documents ou bilans à apporter, précautions particulières..."}
             value={notes}
             onChange={e => setNotes(e.target.value)}
           />

@@ -42,7 +42,7 @@ interface RadioExam {
 type TabType = 'overview' | 'exams' | 'results';
 
 export function RadiologyDashboard() {
-  const { t, isArabic } = useLanguage();
+  const { isArabic } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [exams, setExams] = useState<RadioExam[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,30 +111,30 @@ export function RadiologyDashboard() {
 
   const stats = [
     {
-      title: 'Examens en attente',
+      title: isArabic ? 'فحوصات معلقة' : 'En attente',
       value: pending.length.toString(),
-      sub: 'À traiter',
+      sub: isArabic ? 'في انتظار الإجراء' : 'À traiter',
       icon: <Clock className="w-6 h-6" />,
       color: 'from-amber-500 to-orange-500',
     },
     {
-      title: 'En cours',
+      title: isArabic ? 'قيد الإجراء' : 'En cours',
       value: inProgress.length.toString(),
-      sub: 'En traitement',
+      sub: isArabic ? 'جاري المعالجة' : 'En traitement',
       icon: <Activity className="w-6 h-6" />,
       color: 'from-blue-500 to-cyan-500',
     },
     {
-      title: 'Terminés',
+      title: isArabic ? 'فحوصات تم إنجازها' : 'Examens Réalisés',
       value: done.length.toString(),
-      sub: 'Rapports disponibles',
+      sub: isArabic ? 'تقارير معتمدة' : 'Rapports disponibles',
       icon: <CheckCircle className="w-6 h-6" />,
       color: 'from-emerald-500 to-teal-500',
     },
     {
-      title: 'Urgences',
+      title: isArabic ? 'حالات مستعجلة' : 'Urgences',
       value: urgent.length.toString(),
-      sub: 'Priorité haute',
+      sub: isArabic ? 'أولوية قصوى' : 'Priorité haute',
       icon: <AlertCircle className="w-6 h-6" />,
       color: 'from-red-500 to-rose-500',
     },
@@ -159,12 +159,16 @@ export function RadiologyDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">{t('radio.title', 'Imagerie Médicale & Radiologie')}</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{isArabic ? 'إدارة فحوصات الأشعة والتصوير الطبي والتقارير الإشعاعية' : 'Gestion des examens d\'imagerie médicale'}</p>
+          <h1 className="text-2xl font-bold text-slate-800">
+            {isArabic ? 'قسم التصوير الطبي والأشعة' : 'Imagerie Médicale & Radiologie'}
+          </h1>
+          <p className="text-slate-500 text-sm mt-0.5">
+            {isArabic ? 'إدارة فحوصات الأشعة والتصوير الطبي والتقارير الإشعاعية' : 'Gestion des examens d\'imagerie médicale'}
+          </p>
         </div>
         <Button variant="outline" onClick={loadExams}>
           <RefreshCw className="w-4 h-4 mr-2" />
-          {t('refresh', 'Actualiser')}
+          {isArabic ? 'تحديث' : 'Actualiser'}
         </Button>
       </div>
 
@@ -197,12 +201,12 @@ export function RadiologyDashboard() {
             className={cn(
               'px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-px',
               activeTab === tab
-                ? 'border-indigo-500 text-indigo-600'
+                ? 'border-indigo-500 text-indigo-600 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             )}
           >
-            {tab === 'overview' ? 'Vue d\'ensemble' :
-             tab === 'exams' ? `Examens (${exams.length})` : `Résultats (${done.length})`}
+            {tab === 'overview' ? (isArabic ? 'نظرة شاملة' : 'Vue d\'ensemble') :
+             tab === 'exams' ? `${isArabic ? 'فحوصات الأشعة' : 'Examens'} (${exams.length})` : `${isArabic ? 'التقارير والنتائج' : 'Résultats'} (${done.length})`}
           </button>
         ))}
       </div>

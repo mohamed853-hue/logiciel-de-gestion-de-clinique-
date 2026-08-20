@@ -161,7 +161,7 @@ export function PharmacyModule({
   initialTab = 'quick-sale',
   preloadedPrescription = null,
 }: PharmacyModuleProps) {
-  const { t } = useLanguage();
+  const { t, isArabic } = useLanguage();
   const [activeTab, setActiveTab] = useState<PharmacyTab>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Tous');
@@ -1534,9 +1534,13 @@ export function PharmacyModule({
               <ShoppingCart className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-black text-slate-800 tracking-tight">Pharmacie &amp; Stocks Intégrés</h1>
+              <h1 className="text-xl font-black text-slate-800 tracking-tight">
+                {isArabic ? 'الصيدلية وإدارة المخزون' : 'Pharmacie & Stocks Intégrés'}
+              </h1>
               <p className="text-xs text-slate-500 font-medium">
-                Ventes rapides au scanner, gestion des stocks, caisse du jour et délivrance d'ordonnances
+                {isArabic 
+                  ? 'المبيعات السريعة، إدارة الأدوية، صندوق اليوم وصرف الوصفات الطبية'
+                  : 'Ventes rapides au scanner, gestion des stocks, caisse du jour et délivrance d\'ordonnances'}
               </p>
             </div>
           </div>
@@ -1553,7 +1557,7 @@ export function PharmacyModule({
             className="text-xs font-bold"
           >
             <Plus className="w-3.5 h-3.5 mr-1" />
-            Nouveau Produit
+            {isArabic ? '+ دواء جديد' : 'Nouveau Produit'}
           </Button>
 
           <Button
@@ -1565,7 +1569,7 @@ export function PharmacyModule({
             className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
           >
             <Truck className="w-3.5 h-3.5 mr-1" />
-            Entrée Stock
+            {isArabic ? 'توريد مخزون' : 'Entrée Stock'}
           </Button>
 
           <Button
@@ -1574,7 +1578,7 @@ export function PharmacyModule({
             onClick={() => loadAllData()}
             disabled={loading}
             className="text-xs font-semibold"
-            title="Rafraîchir les données"
+            title={isArabic ? 'تحديث البيانات' : 'Rafraîchir les données'}
           >
             <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
           </Button>

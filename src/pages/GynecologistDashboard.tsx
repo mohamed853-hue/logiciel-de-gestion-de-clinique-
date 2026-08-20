@@ -32,7 +32,7 @@ type TabType = 'overview' | 'patients' | 'pregnancy' | 'lab';
 
 export function GynecologistDashboard() {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, isArabic } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [grossesses, setGrossesses] = useState<GynGrossesse[]>([]);
@@ -107,30 +107,30 @@ export function GynecologistDashboard() {
 
   const stats = [
     {
-      title: t('stats.pregnant_patients', 'Patientes Enceintes'),
+      title: isArabic ? 'الحوامل قيد المتابعة' : 'Patientes Enceintes',
       value: Math.max(grossesses.length, pregnantPatientsFromBase.length).toString(),
-      sub: 'Suivies en CPN & Maternité',
+      sub: isArabic ? 'متابعة CPN والأمومة' : 'Suivies en CPN & Maternité',
       icon: <Baby className="w-6 h-6" />,
       color: 'from-pink-500 to-rose-500',
     },
     {
-      title: 'Patientes Féminines',
+      title: isArabic ? 'النساء المسجلات' : 'Patientes Féminines',
       value: femalePatients.length.toString(),
-      sub: 'Enregistrées en système',
+      sub: isArabic ? 'مسجلات في النظام' : 'Enregistrées en système',
       icon: <Heart className="w-6 h-6" />,
       color: 'from-red-500 to-pink-500',
     },
     {
-      title: 'Analyses Demandées',
+      title: isArabic ? 'التحاليل المطلوبة' : 'Analyses Demandées',
       value: labTests.length.toString(),
-      sub: 'Examens de laboratoire',
+      sub: isArabic ? 'فحوصات مخبرية' : 'Examens de laboratoire',
       icon: <FlaskConical className="w-6 h-6" />,
       color: 'from-purple-500 to-violet-500',
     },
     {
-      title: 'Ordonnances Rédigées',
+      title: isArabic ? 'الوصفات الصادرة' : 'Ordonnances Rédigées',
       value: prescriptions.length.toString(),
-      sub: 'Prescriptions émises',
+      sub: isArabic ? 'وصفات محررة' : 'Prescriptions émises',
       icon: <FileText className="w-6 h-6" />,
       color: 'from-cyan-500 to-blue-500',
     },
@@ -142,16 +142,18 @@ export function GynecologistDashboard() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            {t('gyneco.title', 'Espace Gynécologie & Maternité')} <Sparkles className="w-5 h-5 text-pink-500 animate-pulse" />
+            {isArabic ? 'قسم النساء والتوليد والأمومة' : 'Espace Gynécologie & Maternité'} <Sparkles className="w-5 h-5 text-pink-500 animate-pulse" />
           </h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            Dr. {user?.firstName} {user?.lastName} — {t('stats.subtitle', 'suivi de grossesse et consultations gynécologiques')}
+            {isArabic 
+              ? `د. ${user?.firstName} ${user?.lastName} — متابعة الحمل والاستشارات النسائية`
+              : `Dr. ${user?.firstName} ${user?.lastName} — suivi de grossesse et consultations gynécologiques`}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => { reloadPatients(); loadGrossesses(); }}>
             <RefreshCw className="w-4 h-4 mr-2" />
-            {t('refresh', 'Actualiser')}
+            {isArabic ? 'تحديث' : 'Actualiser'}
           </Button>
           <Button onClick={() => setShowAppointmentModal(true)} className="bg-pink-600 hover:bg-pink-700 text-white font-bold">
             <Calendar className="w-4 h-4 mr-2" />
@@ -183,10 +185,10 @@ export function GynecologistDashboard() {
       {/* Tabs */}
       <div className="flex gap-1 border-b border-slate-200">
         {[
-          { id: 'overview', label: t('gyn.tab.overview', 'Vue d\'ensemble') },
-          { id: 'patients', label: `${t('gyn.tab.patients', 'Patientes')} (${femalePatients.length})` },
-          { id: 'pregnancy', label: `${t('gyn.tab.pregnancy', 'Suivi des Grossesses (CPN)')} (${Math.max(grossesses.length, pregnantPatientsFromBase.length)})` },
-          { id: 'lab', label: `${t('gyn.tab.labs', 'Examens & Labo')} (${labTests.length})` },
+          { id: 'overview', label: isArabic ? 'نظرة شاملة' : "Vue d'ensemble" },
+          { id: 'patients', label: `${isArabic ? 'المريضات' : 'Patientes'} (${femalePatients.length})` },
+          { id: 'pregnancy', label: `${isArabic ? 'متابعة الحمل (CPN)' : 'Suivi des Grossesses (CPN)'} (${Math.max(grossesses.length, pregnantPatientsFromBase.length)})` },
+          { id: 'lab', label: `${isArabic ? 'الفحوصات والمخبر' : 'Examens & Labo'} (${labTests.length})` },
         ].map((tab) => (
           <button
             key={tab.id}

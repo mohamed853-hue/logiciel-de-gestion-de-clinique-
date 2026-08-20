@@ -78,6 +78,27 @@ const DICTIONARY: Record<Language, Record<string, string>> = {
     'nav.reports': 'Rapports d\'Activité',
     'nav.settings': 'Configuration',
 
+    // Doctor Tabs
+    'doctor.tab.overview': 'Tableau de Bord',
+    'doctor.tab.patients': 'File des Patients',
+    'doctor.tab.appointments': 'Rendez-vous',
+    'doctor.tab.labs': 'Analyses & Résultats',
+    'doctor.tab.prescriptions': 'Ordonnances',
+
+    // Gynecologist Tabs
+    'gyn.tab.overview': 'Vue d\'ensemble',
+    'gyn.tab.patients': 'Patientes',
+    'gyn.tab.pregnancy': 'Suivi des Grossesses (CPN)',
+    'gyn.tab.labs': 'Examens & Labo',
+
+    // Nurse & Lab Tabs
+    'nurse.tab.tasks': 'Soins & Tâches',
+    'nurse.tab.vitals': 'Prise de Constantes',
+    'lab.tab.requests': 'Demandes Reçues',
+    'lab.tab.results': 'Résultats Validés',
+    'radio.tab.exams': 'Examens du Jour',
+    'radio.tab.archive': 'Comptes-Rendus & Historique',
+
     // Buttons
     'btn.new_patient': '+ Nouveau Patient',
     'btn.schedule_appointment': '+ Planifier RDV',
@@ -339,6 +360,27 @@ const DICTIONARY: Record<Language, Record<string, string>> = {
     'nav.statistics': 'إحصائيات النظام',
     'nav.reports': 'تقارير النشاط',
     'nav.settings': 'إعدادات العيادة',
+
+    // Doctor Tabs
+    'doctor.tab.overview': 'لوحة القيادة',
+    'doctor.tab.patients': 'قائمة المرضى',
+    'doctor.tab.appointments': 'المواعيد',
+    'doctor.tab.labs': 'التحاليل والنتائج',
+    'doctor.tab.prescriptions': 'الوصفات الطبية',
+
+    // Gynecologist Tabs
+    'gyn.tab.overview': 'نظرة شاملة',
+    'gyn.tab.patients': 'المريضات',
+    'gyn.tab.pregnancy': 'متابعة الحمل (CPN)',
+    'gyn.tab.labs': 'الفحوصات والمخبر',
+
+    // Nurse & Lab Tabs
+    'nurse.tab.tasks': 'العلاجات والمهام',
+    'nurse.tab.vitals': 'قياس العلامات الحيوية',
+    'lab.tab.requests': 'الطلبات الواردة',
+    'lab.tab.results': 'النتائج المعتمدة',
+    'radio.tab.exams': 'فحوصات اليوم',
+    'radio.tab.archive': 'التقارير والأرشيف',
 
     // Buttons
     'btn.new_patient': '+ مريض جديد',

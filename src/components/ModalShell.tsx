@@ -317,14 +317,14 @@ export function ModalErrorAlert({ message }: { message: string }) {
 /**
  * CancelButton — Bouton Annuler standard
  */
-export function CancelButton({ onClick, children = 'Annuler' }: { onClick: () => void; children?: React.ReactNode }) {
+export function CancelButton({ onClick, label, children }: { onClick: () => void; label?: string; children?: React.ReactNode }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className="px-4 py-2.5 sm:px-5 sm:py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-100 active:bg-slate-200 transition-all cursor-pointer shadow-xs"
     >
-      {children}
+      {children || label || 'Annuler'}
     </button>
   );
 }

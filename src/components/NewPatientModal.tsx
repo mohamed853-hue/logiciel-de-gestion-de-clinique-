@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UserPlus, User, Baby, Users, Activity, Sparkles, CheckCircle2, CreditCard, Stethoscope, AlertCircle } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useClinicSettings } from '../services/clinicSettingsService';
+import { useLanguage } from '../hooks/useLanguage';
 import {
   ModalShell,
   FormSection,
@@ -18,9 +19,11 @@ interface NewPatientModalProps {
   onSuccess?: () => void;
 }
 
-const RELATION_OPTIONS = ['Mari', 'Femme', 'Père', 'Mère', 'Frère', 'Sœur', 'Fils', 'Fille', 'Proche', 'Autre'];
+const RELATION_OPTIONS_FR = ['Mari', 'Femme', 'Père', 'Mère', 'Frère', 'Sœur', 'Fils', 'Fille', 'Proche', 'Autre'];
+const RELATION_OPTIONS_AR = ['زوج', 'زوجة', 'أب', 'أم', 'أخ', 'أخت', 'ابن', 'ابنة', 'قريب', 'آخر'];
 
 export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
+  const { isArabic } = useLanguage();
   const { settings: clinicSettings } = useClinicSettings();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -40,7 +43,7 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
     allergies: '',
     address: '',
     city: '',
-    country: 'Sénégal',
+    country: 'Mauritanie',
     visit_reason: 'Consultation',
     arrival_status: 'stable',
     // Consultation & Paiement
@@ -310,23 +313,23 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
   return (
     <ModalShell
       icon={<UserPlus className="w-5 h-5 text-blue-300" />}
-      title="Enregistrement d'un Nouveau Patient"
-      subtitle="Seuls le Nom, Prénom et Téléphone sont obligatoires"
+      title={isArabic ? 'تسجيل مريض جديد' : "Enregistrement d'un Nouveau Patient"}
+      subtitle={isArabic ? 'اللقب، الاسم ورقم الهاتف فقط هي الحقول الإلزامية' : 'Seuls le Nom, Prénom et Téléphone sont obligatoires'}
       color="blue"
       maxWidth="xl"
       onClose={onClose}
       footer={
         <>
-          <CancelButton onClick={onClose} />
+          <CancelButton onClick={onClose} label={isArabic ? 'إلغاء' : 'Annuler'} />
           <SubmitButton
             loading={loading}
-            loadingText="Création du dossier..."
+            loadingText={isArabic ? 'جاري إنشاء الملف...' : 'Création du dossier...'}
             color="blue"
             onClick={handleSubmit}
             form="new-patient-form"
           >
             <CheckCircle2 className="w-4 h-4" />
-            Créer & Enregistrer le Dossier
+            {isArabic ? 'إنشاء وحفظ ملف المريض' : 'Créer & Enregistrer le Dossier'}
           </SubmitButton>
         </>
       }
@@ -339,25 +342,25 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
               <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-xs font-black text-rose-900">
-                  Attention : Veuillez renseigner les champs obligatoires manquants
+                  {isArabic ? 'تنبيه : يرجى ملء الحقول الإلزامية المطلوبة' : 'Attention : Veuillez renseigner les champs obligatoires manquants'}
                 </p>
                 <p className="text-[11px] text-rose-700 mt-0.5 font-medium">
-                  Seuls ces 3 éléments sont indispensables pour ouvrir le dossier médical :
+                  {isArabic ? 'هذه العناصر الثلاثة فقط ضرورية لفتح الملف الطبي :' : 'Seuls ces 3 éléments sont indispensables pour ouvrir le dossier médical :'}
                 </p>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {missingLastName && (
                     <span className="px-2.5 py-1 rounded-lg bg-rose-200 text-rose-950 font-black text-xs flex items-center gap-1 shadow-2xs">
-                      ❌ Nom de famille
+                      ❌ {isArabic ? 'اللقب / اسم العائلة' : 'Nom de famille'}
                     </span>
                   )}
                   {missingFirstName && (
                     <span className="px-2.5 py-1 rounded-lg bg-rose-200 text-rose-950 font-black text-xs flex items-center gap-1 shadow-2xs">
-                      ❌ Prénom
+                      ❌ {isArabic ? 'الاسم الشخصي' : 'Prénom'}
                     </span>
                   )}
                   {missingPhone && (
                     <span className="px-2.5 py-1 rounded-lg bg-rose-200 text-rose-950 font-black text-xs flex items-center gap-1 shadow-2xs">
-                      ❌ Numéro de téléphone
+                      ❌ {isArabic ? 'رقم الهاتف' : 'Numéro de téléphone'}
                     </span>
                   )}
                 </div>
@@ -371,9 +374,13 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
           <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-2xl flex items-center gap-3 animate-scale-in">
             <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" />
             <div>
-              <p className="text-sm font-black text-emerald-950">Patient Enregistré avec Succès ! 🎉</p>
+              <p className="text-sm font-black text-emerald-950">
+                {isArabic ? 'تم تسجيل المريض بنجاح ! 🎉' : 'Patient Enregistré avec Succès ! 🎉'}
+              </p>
               <p className="text-xs text-emerald-800 font-semibold mt-0.5">
-                Le dossier <strong className="font-mono font-black">#{previewNumber}</strong> a été créé et intégré à la file d'attente.
+                {isArabic 
+                  ? `تم إنشاء الملف رقم #${previewNumber} وإدراجه في قائمة الانتظار.`
+                  : `Le dossier #${previewNumber} a été créé et intégré à la file d'attente.`}
               </p>
             </div>
           </div>
@@ -393,38 +400,38 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
             </div>
             <div>
               <p className="text-xs text-blue-950 font-extrabold flex items-center gap-1.5">
-                <span>{formData.first_name || formData.last_name ? `${formData.first_name} ${formData.last_name}`.trim() : 'Nouveau Dossier Patient'}</span>
-                {formData.age && <span className="text-slate-500 font-semibold text-[11px]">({formData.age} ans)</span>}
+                <span>{formData.first_name || formData.last_name ? `${formData.first_name} ${formData.last_name}`.trim() : (isArabic ? 'ملف مريض جديد' : 'Nouveau Dossier Patient')}</span>
+                {formData.age && <span className="text-slate-500 font-semibold text-[11px]">({formData.age} {isArabic ? 'سنة' : 'ans'})</span>}
               </p>
               <p className="text-[11px] text-slate-500 font-medium">
-                Dossier : <strong className="text-blue-700 font-mono font-black">#{previewNumber}</strong> · Arrivée : {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                {isArabic ? 'رقم الملف :' : 'Dossier :'} <strong className="text-blue-700 font-mono font-black">#{previewNumber}</strong> · {isArabic ? 'الوصول :' : 'Arrivée :'} {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
           </div>
           <span className="px-2 py-0.5 rounded-lg bg-blue-100 text-blue-900 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-blue-600" /> Dossier Actif
+            <Sparkles className="w-3 h-3 text-blue-600" /> {isArabic ? 'ملف نشط' : 'Dossier Actif'}
           </span>
         </div>
 
         {/* ─── SECTION 1: ÉTAT CIVIL & CONTACT (3 CHAMPS OBLIGATOIRES) ────────── */}
-        <FormSection title="1. Identité & Coordonnées (3 Champs Obligatoires)" icon={<User className="w-4 h-4 text-blue-600" />}>
+        <FormSection title={isArabic ? '1. الهوية وبيانات الاتصال (3 حقول إجبارية)' : '1. Identité & Coordonnées (3 Champs Obligatoires)'} icon={<User className="w-4 h-4 text-blue-600" />}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FormField label="Nom de Famille" required>
+            <FormField label={isArabic ? 'اللقب / اسم العائلة' : 'Nom de Famille'} required>
               <ModalInput
                 accent="blue"
                 required
-                placeholder="Ex: Diallo, Benali, Sow..."
+                placeholder={isArabic ? 'مثال: بن علي، ديوب، ديالو...' : 'Ex: Diallo, Benali, Sow...'}
                 value={formData.last_name}
                 onChange={e => setFormData({ ...formData, last_name: e.target.value })}
                 className={hasAttemptedSubmit && missingLastName ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/30' : ''}
               />
             </FormField>
 
-            <FormField label="Prénom du Patient" required>
+            <FormField label={isArabic ? 'الاسم الشخصي للمريض' : 'Prénom du Patient'} required>
               <ModalInput
                 accent="blue"
                 required
-                placeholder="Ex: Mohamed, Amina, Mamadou..."
+                placeholder={isArabic ? 'مثال: محمد، أمينة، أحمد...' : 'Ex: Mohamed, Amina, Mamadou...'}
                 value={formData.first_name}
                 onChange={e => setFormData({ ...formData, first_name: e.target.value })}
                 className={hasAttemptedSubmit && missingFirstName ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/30' : ''}
@@ -433,31 +440,31 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-0.5">
-            <FormField label="N° Téléphone" required>
+            <FormField label={isArabic ? 'رقم الهاتف' : 'N° Téléphone'} required>
               <ModalInput
                 accent="blue"
                 required
                 type="tel"
-                placeholder="Ex: 06 12 34 56 78"
+                placeholder={isArabic ? 'مثال: 06 12 34 56 78' : 'Ex: 06 12 34 56 78'}
                 value={formData.phone}
                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
                 className={hasAttemptedSubmit && missingPhone ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/30' : ''}
               />
             </FormField>
 
-            <FormField label="Âge (Optionnel)">
+            <FormField label={isArabic ? 'العمر (اختياري)' : 'Âge (Optionnel)'}>
               <ModalInput
                 accent="blue"
                 type="number"
                 min="0"
                 max="120"
-                placeholder="Ex: 34"
+                placeholder={isArabic ? 'مثال: 34' : 'Ex: 34'}
                 value={formData.age}
                 onChange={e => setFormData({ ...formData, age: e.target.value })}
               />
             </FormField>
 
-            <FormField label="Sexe (Optionnel)">
+            <FormField label={isArabic ? 'الجنس (اختياري)' : 'Sexe (Optionnel)'}>
               <ModalSelect
                 accent="blue"
                 value={formData.sex}
@@ -470,9 +477,9 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
                   }));
                 }}
               >
-                <option value="">-- Non spécifié --</option>
-                <option value="M">Masculin (M)</option>
-                <option value="F">Féminin (F)</option>
+                <option value="">{isArabic ? '-- غير محدد --' : '-- Non spécifié --'}</option>
+                <option value="M">{isArabic ? 'ذكر (M)' : 'Masculin (M)'}</option>
+                <option value="F">{isArabic ? 'أنثى (F)' : 'Féminin (F)'}</option>
               </ModalSelect>
             </FormField>
           </div>
@@ -484,7 +491,7 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
                 <div className="flex items-center gap-2">
                   <Baby className="w-4 h-4 text-pink-600" />
                   <span className="font-extrabold text-pink-950 text-xs">
-                    Cette patiente est-elle actuellement enceinte ?
+                    {isArabic ? 'هل هذه المريضة حامل حالياً ؟' : 'Cette patiente est-elle actuellement enceinte ?'}
                   </span>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -495,14 +502,14 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
                     className="w-4 h-4 text-pink-600 rounded focus:ring-pink-500 cursor-pointer"
                   />
                   <span className="text-xs font-black text-pink-800">
-                    {formData.is_pregnant ? 'Oui' : 'Non'}
+                    {formData.is_pregnant ? (isArabic ? 'نعم' : 'Oui') : (isArabic ? 'لا' : 'Non')}
                   </span>
                 </label>
               </div>
 
               {formData.is_pregnant && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-pink-200/80">
-                  <FormField label="Mois de Grossesse">
+                  <FormField label={isArabic ? 'أشهر الحمل' : 'Mois de Grossesse'}>
                     <ModalInput
                       accent="rose"
                       type="number"
@@ -514,17 +521,17 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
                     />
                   </FormField>
 
-                  <FormField label="Terme (SA)">
+                  <FormField label={isArabic ? 'عمر الحمل (أسابيع)' : 'Terme (SA)'}>
                     <ModalInput
                       accent="rose"
-                      placeholder="Auto"
+                      placeholder={isArabic ? 'تلقائي' : 'Auto'}
                       value={formData.pregnancy_weeks ? `${formData.pregnancy_weeks} SA` : ''}
                       readOnly
                       className="bg-pink-100/70 text-pink-900 font-bold"
                     />
                   </FormField>
 
-                  <FormField label="DPA Prévue">
+                  <FormField label={isArabic ? 'التاريخ المتوقع للولادة' : 'DPA Prévue'}>
                     <ModalInput
                       accent="rose"
                       type="date"
@@ -538,13 +545,13 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
-            <FormField label="Groupe Sanguin">
+            <FormField label={isArabic ? 'فصيلة الدم' : 'Groupe Sanguin'}>
               <ModalSelect
                 accent="blue"
                 value={formData.blood}
                 onChange={e => setFormData({ ...formData, blood: e.target.value })}
               >
-                <option value="">Non renseigné</option>
+                <option value="">{isArabic ? 'غير مسجل' : 'Non renseigné'}</option>
                 <option value="O+">O+</option>
                 <option value="O-">O-</option>
                 <option value="A+">A+</option>
@@ -556,10 +563,10 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
               </ModalSelect>
             </FormField>
 
-            <FormField label="Allergies / Antécédents">
+            <FormField label={isArabic ? 'الحساسية / السوابق المرضية' : 'Allergies / Antécédents'}>
               <ModalInput
                 accent="blue"
-                placeholder="Ex: Pénicilline, Asthme..."
+                placeholder={isArabic ? 'مثال: البنسلين، الربو...' : 'Ex: Pénicilline, Asthme...'}
                 value={formData.allergies}
                 onChange={e => setFormData({ ...formData, allergies: e.target.value })}
               />
@@ -568,29 +575,29 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
         </FormSection>
 
         {/* ─── SECTION 2: MOTIF & ÉTAT D'ARRIVÉE ───────────────────────────────── */}
-        <FormSection title="2. Motif d'Accueil & État Clinique (Optionnel)" icon={<Activity className="w-4 h-4 text-blue-600" />}>
+        <FormSection title={isArabic ? '2. سبب الزيارة والحالة السريرية (اختياري)' : "2. Motif d'Accueil & État Clinique (Optionnel)"} icon={<Activity className="w-4 h-4 text-blue-600" />}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FormField label="Motif Principal">
+            <FormField label={isArabic ? 'السبب الرئيسي للزيارة' : 'Motif Principal'}>
               <ModalSelect
                 accent="blue"
                 value={formData.visit_reason}
                 onChange={e => setFormData({ ...formData, visit_reason: e.target.value })}
               >
-                <option value="Consultation">🩺 Consultation Générale</option>
-                <option value="Suivi Médical">📋 Suivi Médical</option>
-                <option value="Soins / Injection">💉 Soins & Injections</option>
-                <option value="Hospitalisation">🛏️ Hospitalisation / Séjour</option>
-                <option value="Urgence">🚨 Consultation d'Urgence</option>
-                <option value="Suivi de Grossesse">👶 Suivi Grossesse</option>
-                <option value="Analyses Labo">🔬 Analyses de Laboratoire</option>
-                <option value="Pharmacie">💊 Achat Médicaments</option>
+                <option value="Consultation">{isArabic ? '🩺 استشارة طبية عامة' : '🩺 Consultation Générale'}</option>
+                <option value="Suivi Médical">{isArabic ? '📋 متابعة دورية' : '📋 Suivi Médical'}</option>
+                <option value="Soins / Injection">{isArabic ? '💉 علاجات وحقن' : '💉 Soins & Injections'}</option>
+                <option value="Hospitalisation">{isArabic ? '🛏️ إقامة وإيواء' : '🛏️ Hospitalisation / Séjour'}</option>
+                <option value="Urgence">{isArabic ? '🚨 حالة استعجالية' : '🚨 Consultation d\'Urgence'}</option>
+                <option value="Suivi de Grossesse">{isArabic ? '👶 متابعة الحمل' : '👶 Suivi Grossesse'}</option>
+                <option value="Analyses Labo">{isArabic ? '🔬 تحاليل مخبرية' : '🔬 Analyses de Laboratoire'}</option>
+                <option value="Pharmacie">{isArabic ? '💊 شراء أدوية' : '💊 Achat Médicaments'}</option>
               </ModalSelect>
             </FormField>
 
-            <FormField label="Ville / Commune">
+            <FormField label={isArabic ? 'المدينة / البلدية' : 'Ville / Commune'}>
               <ModalInput
                 accent="blue"
-                placeholder="Ex: Alger, Oran, Blida..."
+                placeholder={isArabic ? 'مثال: نواكشوط، روصو...' : 'Ex: Nouakchott, Rosso...'}
                 value={formData.city}
                 onChange={e => setFormData({ ...formData, city: e.target.value })}
               />
@@ -599,13 +606,13 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
 
           <div className="pt-1">
             <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
-              État Clinique à l'Arrivée
+              {isArabic ? 'الحالة السريرية عند الوصول' : "État Clinique à l'Arrivée"}
             </label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'stable', label: '✓ Patient Stable', color: 'border-emerald-500 bg-emerald-50 text-emerald-800' },
-                { id: 'preoccupant', label: '⚡ Préoccupant', color: 'border-amber-500 bg-amber-50 text-amber-800' },
-                { id: 'urgent', label: '🚨 Urgence', color: 'border-rose-500 bg-rose-50 text-rose-800' },
+                { id: 'stable', label: isArabic ? '✓ مريض مستقر' : '✓ Patient Stable', color: 'border-emerald-500 bg-emerald-50 text-emerald-800' },
+                { id: 'preoccupant', label: isArabic ? '⚡ مقلقة' : '⚡ Préoccupant', color: 'border-amber-500 bg-amber-50 text-amber-800' },
+                { id: 'urgent', label: isArabic ? '🚨 طارئة / حرجة' : '🚨 Urgence', color: 'border-rose-500 bg-rose-50 text-rose-800' },
               ].map(s => (
                 <button
                   key={s.id}
@@ -626,11 +633,11 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
         </FormSection>
 
         {/* ─── SECTION 3: PROCHE ACCOMPAGNANT ──────────────────────────────────── */}
-        <FormSection title="3. Proche Accompagnant" icon={<Users className="w-4 h-4 text-blue-600" />}>
+        <FormSection title={isArabic ? '3. المرافق القريب (اختياري)' : '3. Proche Accompagnant'} icon={<Users className="w-4 h-4 text-blue-600" />}>
           <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
             <label className="flex items-center justify-between cursor-pointer">
               <span className="font-extrabold text-slate-800 text-xs">
-                Le patient est-il accompagné d'un proche ?
+                {isArabic ? 'هل المريض مرفوق بشخص قريب ؟' : "Le patient est-il accompagné d'un proche ?"}
               </span>
               <input
                 type="checkbox"
@@ -643,19 +650,19 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
             {formData.is_accompanied && (
               <div className="space-y-2.5 pt-2 border-t border-slate-200 animate-slide-in">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <FormField label="Prénom de l'Accompagnant">
+                  <FormField label={isArabic ? 'الاسم الشخصي للمرافق' : "Prénom de l'Accompagnant"}>
                     <ModalInput
                       accent="blue"
-                      placeholder="Ex: Fatou, Amina, Ousmane..."
+                      placeholder={isArabic ? 'مثال: فاطمة، أمينة...' : 'Ex: Fatou, Amina, Ousmane...'}
                       value={formData.accompanier_first_name}
                       onChange={e => setFormData({ ...formData, accompanier_first_name: e.target.value })}
                     />
                   </FormField>
 
-                  <FormField label="Nom de Famille de l'Accompagnant">
+                  <FormField label={isArabic ? 'اسم عائلة المرافق' : "Nom de Famille de l'Accompagnant"}>
                     <ModalInput
                       accent="blue"
-                      placeholder="Ex: Diallo, Diop, Sow..."
+                      placeholder={isArabic ? 'مثال: ديالو، باه...' : 'Ex: Diallo, Diop, Sow...'}
                       value={formData.accompanier_last_name}
                       onChange={e => setFormData({ ...formData, accompanier_last_name: e.target.value })}
                     />
@@ -663,7 +670,7 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <FormField label="N° Téléphone de l'Accompagnant">
+                  <FormField label={isArabic ? 'رقم هاتف المرافق' : "N° Téléphone de l'Accompagnant"}>
                     <ModalInput
                       accent="blue"
                       type="tel"
@@ -673,13 +680,13 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
                     />
                   </FormField>
 
-                  <FormField label="Lien de Parenté">
+                  <FormField label={isArabic ? 'صلة القرابة' : 'Lien de Parenté'}>
                     <ModalSelect
                       accent="blue"
                       value={formData.accompanier_relationship}
                       onChange={e => setFormData({ ...formData, accompanier_relationship: e.target.value })}
                     >
-                      {RELATION_OPTIONS.map(r => (
+                      {(isArabic ? RELATION_OPTIONS_AR : RELATION_OPTIONS_FR).map(r => (
                         <option key={r} value={r}>{r}</option>
                       ))}
                     </ModalSelect>
@@ -691,13 +698,13 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
         </FormSection>
 
         {/* ─── SECTION 4: CONSULTATION & RÈGLEMENT À L'ACCUEIL ──────────────────── */}
-        <FormSection title="4. Consultation Médicale & Règlement" icon={<CreditCard className="w-4 h-4 text-emerald-600" />}>
+        <FormSection title={isArabic ? '4. الاستشارة الطبية والدفع (اختياري)' : '4. Consultation Médicale & Règlement'} icon={<CreditCard className="w-4 h-4 text-emerald-600" />}>
           <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
             <label className="flex items-center justify-between cursor-pointer">
               <div className="flex items-center gap-2">
                 <Stethoscope className="w-4 h-4 text-emerald-600" />
                 <span className="font-extrabold text-slate-800 text-xs">
-                  Facturer un acte de consultation dès l'enregistrement
+                  {isArabic ? 'فوترة استشارة طبية مباشرة عند التسجيل' : "Facturer un acte de consultation dès l'enregistrement"}
                 </span>
               </div>
               <input
@@ -711,7 +718,7 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
             {formData.bill_consultation && (
               <div className="space-y-3 pt-2 border-t border-slate-200 animate-slide-in">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <FormField label="Type d'Acte Médical">
+                  <FormField label={isArabic ? 'نوع الفحص الطبي' : "Type d'Acte Médical"}>
                     <ModalSelect
                       accent="emerald"
                       value={formData.consultation_type}
@@ -724,14 +731,14 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
                         setFormData({ ...formData, consultation_type: t, consultation_price: p });
                       }}
                     >
-                      <option value="Consultation Générale">🩺 Consultation Générale ({clinicSettings.consultationGeneral || 5000} FCFA)</option>
-                      <option value="Consultation Spécialiste">👨‍⚕️ Spécialiste / Gynéco ({clinicSettings.consultationSpecialist || 10000} FCFA)</option>
-                      <option value="Consultation d'Urgence">🚨 Urgence ({clinicSettings.consultationEmergency || 7500} FCFA)</option>
-                      <option value="Contrôle / Suivi">🔍 Contrôle ({clinicSettings.consultationControl || 3000} FCFA)</option>
+                      <option value="Consultation Générale">🩺 {isArabic ? 'استشارة عامة' : 'Consultation Générale'} ({clinicSettings.consultationGeneral || 5000} FCFA)</option>
+                      <option value="Consultation Spécialiste">👨‍⚕️ {isArabic ? 'استشارة أخصائي / نساء' : 'Spécialiste / Gynéco'} ({clinicSettings.consultationSpecialist || 10000} FCFA)</option>
+                      <option value="Consultation d'Urgence">🚨 {isArabic ? 'استعجالية' : 'Urgence'} ({clinicSettings.consultationEmergency || 7500} FCFA)</option>
+                      <option value="Contrôle / Suivi">🔍 {isArabic ? 'فحص مراقبة' : 'Contrôle'} ({clinicSettings.consultationControl || 3000} FCFA)</option>
                     </ModalSelect>
                   </FormField>
 
-                  <FormField label="Montant à Régler (FCFA)">
+                  <FormField label={isArabic ? 'المبلغ المستحق (فرنك)' : 'Montant à Régler (FCFA)'}>
                     <ModalInput
                       accent="emerald"
                       type="number"
@@ -743,7 +750,9 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
 
                 {/* Timing du paiement */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1.5">Modalité de Paiement</label>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                    {isArabic ? 'طريقة الدفع' : 'Modalité de Paiement'}
+                  </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <button
                       type="button"
@@ -756,8 +765,10 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
                       )}
                     >
                       <div>
-                        <p className="font-extrabold">💳 Payer Maintenant</p>
-                        <p className="text-[10px] text-emerald-700 font-medium">Validé & Reçu direct à la caisse</p>
+                        <p className="font-extrabold">{isArabic ? '💳 الدفع الآن (فوري)' : '💳 Payer Maintenant'}</p>
+                        <p className="text-[10px] text-emerald-700 font-medium">
+                          {isArabic ? 'تحصيل فوري وإصدار إيصال' : 'Validé & Reçu direct à la caisse'}
+                        </p>
                       </div>
                       {formData.payment_timing === 'pay_now' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
                     </button>
@@ -773,8 +784,10 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
                       )}
                     >
                       <div>
-                        <p className="font-extrabold">⏳ Payer Après Consultation</p>
-                        <p className="text-[10px] text-amber-700 font-medium">Facture mise en attente</p>
+                        <p className="font-extrabold">{isArabic ? '⏳ الدفع بعد الاستشارة' : '⏳ Payer Après Consultation'}</p>
+                        <p className="text-[10px] text-amber-700 font-medium">
+                          {isArabic ? 'تسجيل فاتورة قيد الانتظار' : 'Facture mise en attente'}
+                        </p>
                       </div>
                       {formData.payment_timing === 'pay_later' && <CheckCircle2 className="w-4 h-4 text-amber-600" />}
                     </button>

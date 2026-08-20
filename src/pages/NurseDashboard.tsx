@@ -33,7 +33,7 @@ type TabType = 'overview' | 'tasks' | 'patients' | 'vitals';
 
 export function NurseDashboard() {
   const { user } = useAuth();
-  const { t, isArabic } = useLanguage();
+  const { isArabic } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [vitalsList, setVitalsList] = useState<VitalsRecord[]>([]);
@@ -134,30 +134,30 @@ export function NurseDashboard() {
 
   const stats = [
     {
-      title: 'Patients en soins',
+      title: isArabic ? 'المرضى في قسم التمريض' : 'Patients en soins',
       value: patients.length.toString(),
-      sub: 'Enregistrés ce jour',
+      sub: isArabic ? 'مسجلون اليوم' : 'Enregistrés ce jour',
       icon: <Users className="w-6 h-6" />,
       color: 'from-cyan-500 to-blue-500',
     },
     {
-      title: 'Prises de constantes',
+      title: isArabic ? 'العلامات الحيوية المقاسة' : 'Prises de constantes',
       value: vitalsList.length.toString(),
-      sub: 'Enregistrements totaux',
+      sub: isArabic ? 'إجمالي السجلات' : 'Enregistrements totaux',
       icon: <Activity className="w-6 h-6" />,
       color: 'from-emerald-500 to-teal-500',
     },
     {
-      title: 'Urgences / À surveiller',
+      title: isArabic ? 'حالات مستعجلة / تحت المراقبة' : 'Urgences / À surveiller',
       value: urgentPatients.length.toString(),
-      sub: 'Nécessitent attention',
+      sub: isArabic ? 'تتطلب عناية خاصة' : 'Nécessitent attention',
       icon: <AlertCircle className="w-6 h-6" />,
       color: 'from-red-500 to-orange-500',
     },
     {
-      title: 'Soins dispensés aujourd\'hui',
+      title: isArabic ? 'العلاجات المقدمة اليوم' : 'Soins dispensés aujourd\'hui',
       value: vitalsList.filter(v => new Date(v.created_at).toDateString() === new Date().toDateString()).length.toString(),
-      sub: 'Ce jour uniquement',
+      sub: isArabic ? 'نشاط اليوم' : 'Ce jour uniquement',
       icon: <Syringe className="w-6 h-6" />,
       color: 'from-purple-500 to-indigo-500',
     },
@@ -176,7 +176,9 @@ export function NurseDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">{t('nurse.title', 'Espace Soins & Constantes')}</h1>
+          <h1 className="text-2xl font-bold text-slate-800">
+            {isArabic ? 'قسم التمريض والعلامات الحيوية' : 'Espace Soins & Constantes'}
+          </h1>
           <p className="text-slate-500 text-sm mt-0.5">
             {user?.firstName} {user?.lastName} — {isArabic ? 'إدارة وتطبيق العلاجات التمريضية وأخذ العلامات الحيوية' : 'administration des soins et prise de constantes'}
           </p>
@@ -184,12 +186,12 @@ export function NurseDashboard() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => { reloadPatients(); loadVitals(); }}>
             <RefreshCw className="w-4 h-4 mr-2" />
-            {t('refresh', 'Actualiser')}
+            {isArabic ? 'تحديث' : 'Actualiser'}
           </Button>
           {patients.length > 0 && (
             <Button onClick={() => { setSelectedPatientForVitals(patients[0]); setShowVitalsForm(true); }}>
               <Activity className="w-4 h-4 mr-2" />
-              {t('btn.take_vitals', 'Prendre Constantes')}
+              {isArabic ? '+ قياس العلامات الحيوية' : 'Prendre Constantes'}
             </Button>
           )}
         </div>
@@ -224,13 +226,13 @@ export function NurseDashboard() {
             className={cn(
               'px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-px',
               activeTab === tab
-                ? 'border-cyan-600 text-cyan-600'
+                ? 'border-cyan-600 text-cyan-600 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             )}
           >
-            {tab === 'overview' ? 'Vue d\'ensemble' :
-             tab === 'tasks' ? 'Soins & Tâches' :
-             tab === 'patients' ? `Patients (${patients.length})` : `Constantes Végétatives (${vitalsList.length})`}
+            {tab === 'overview' ? (isArabic ? 'نظرة شاملة' : 'Vue d\'ensemble') :
+             tab === 'tasks' ? (isArabic ? 'العلاجات والمهام' : 'Soins & Tâches') :
+             tab === 'patients' ? `${isArabic ? 'المرضى' : 'Patients'} (${patients.length})` : `${isArabic ? 'العلامات الحيوية' : 'Constantes Vitales'} (${vitalsList.length})`}
           </button>
         ))}
       </div>

@@ -155,33 +155,33 @@ export function DoctorDashboard() {
 
   const stats = [
     {
-      title: 'Patients en Consultation',
+      title: isArabic ? 'المرضى في الانتظار' : 'Patients en Consultation',
       value: patients.length.toString(),
-      sub: `${urgentPatients.length} cas urgents`,
+      sub: `${urgentPatients.length} ${isArabic ? 'حالات حرجة' : 'cas urgents'}`,
       icon: <Users className="w-6 h-6" />,
       color: 'from-blue-500 to-cyan-500',
       onClick: () => setActiveTab('patients'),
     },
     {
-      title: 'RDV Aujourd\'hui',
+      title: isArabic ? 'مواعيد اليوم' : 'RDV Aujourd\'hui',
       value: todayAppts.length.toString(),
-      sub: `${appointments.filter(a => a.status === 'planifie').length} planifié(s)`,
+      sub: `${appointments.filter(a => a.status === 'planifie').length} ${isArabic ? 'مجدول' : 'planifié(s)'}`,
       icon: <Calendar className="w-6 h-6" />,
       color: 'from-violet-500 to-purple-500',
       onClick: () => setActiveTab('appointments'),
     },
     {
-      title: 'Analyses en attente',
+      title: isArabic ? 'التحاليل المعلقة' : 'Analyses en attente',
       value: pendingLabsCount.toString(),
-      sub: `${labTests.length} total envoyées`,
+      sub: `${labTests.length} ${isArabic ? 'إجمالي الطلبات' : 'total envoyées'}`,
       icon: <FlaskConical className="w-6 h-6" />,
       color: 'from-purple-500 to-pink-500',
       onClick: () => setActiveTab('lab'),
     },
     {
-      title: 'Ordonnances',
+      title: isArabic ? 'الوصفات الطبية' : 'Ordonnances',
       value: prescriptions.length.toString(),
-      sub: `${prescriptions.filter(p => p.status === 'delivree').length} délivrées`,
+      sub: `${prescriptions.filter(p => p.status === 'delivree').length} ${isArabic ? 'تم صرفها' : 'délivrées'}`,
       icon: <FileText className="w-6 h-6" />,
       color: 'from-emerald-500 to-teal-500',
       onClick: () => setActiveTab('prescriptions'),
@@ -189,11 +189,11 @@ export function DoctorDashboard() {
   ];
 
   const tabs: Array<{ id: TabType; label: string; icon: React.ReactNode; count?: number }> = [
-    { id: 'overview', label: t('doctor.tab.overview', 'Tableau de Bord'), icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'patients', label: t('doctor.tab.patients', 'File des Patients'), icon: <Stethoscope className="w-4 h-4" />, count: patients.length },
-    { id: 'appointments', label: t('doctor.tab.appointments', 'Rendez-vous'), icon: <Calendar className="w-4 h-4" />, count: todayAppts.length },
-    { id: 'lab', label: t('doctor.tab.labs', 'Analyses & Résultats'), icon: <FlaskConical className="w-4 h-4" />, count: labTests.length },
-    { id: 'prescriptions', label: t('doctor.tab.prescriptions', 'Ordonnances'), icon: <FileText className="w-4 h-4" />, count: prescriptions.length },
+    { id: 'overview', label: isArabic ? 'لوحة القيادة' : 'Tableau de Bord', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'patients', label: isArabic ? 'قائمة المرضى' : 'File des Patients', icon: <Stethoscope className="w-4 h-4" />, count: patients.length },
+    { id: 'appointments', label: isArabic ? 'المواعيد' : 'Rendez-vous', icon: <Calendar className="w-4 h-4" />, count: todayAppts.length },
+    { id: 'lab', label: isArabic ? 'التحاليل والنتائج' : 'Analyses & Résultats', icon: <FlaskConical className="w-4 h-4" />, count: labTests.length },
+    { id: 'prescriptions', label: isArabic ? 'الوصفات الطبية' : 'Ordonnances', icon: <FileText className="w-4 h-4" />, count: prescriptions.length },
   ];
 
   return (
@@ -201,24 +201,28 @@ export function DoctorDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Espace Médecin</h1>
+          <h1 className="text-2xl font-bold text-slate-800">
+            {isArabic ? 'فضاء الطبيب والاستشارات' : 'Espace Médecin'}
+          </h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            Dr. {user?.firstName} {user?.lastName} — consultations et dossiers médicaux
+            {isArabic 
+              ? `د. ${user?.firstName} ${user?.lastName} — الاستشارات والملفات الطبية`
+              : `Dr. ${user?.firstName} ${user?.lastName} — consultations et dossiers médicaux`}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={reloadAll}>
             <RefreshCw className="w-4 h-4 mr-2" />
-            Actualiser
+            {isArabic ? 'تحديث' : 'Actualiser'}
           </Button>
           <Button onClick={() => setShowAppointmentModal(true)} className="bg-purple-600 hover:bg-purple-700 text-white font-bold">
             <Calendar className="w-4 h-4 mr-2" />
-            Planifier RDV
+            {t('btn.schedule_appointment', '+ Planifier RDV')}
           </Button>
           {patients.length > 0 && (
             <Button onClick={() => setPrescriptionPatient(patients[0])}>
               <Pill className="w-4 h-4 mr-2" />
-              Rédiger Ordonnance
+              {isArabic ? 'تحرير وصفة' : 'Rédiger Ordonnance'}
             </Button>
           )}
         </div>
