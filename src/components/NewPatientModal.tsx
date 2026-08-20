@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserPlus, User, Baby, Users, Activity, Sparkles, CheckCircle2, CreditCard, Stethoscope } from 'lucide-react';
+import { UserPlus, User, Baby, Users, Activity, Sparkles, CheckCircle2, CreditCard, Stethoscope, AlertCircle } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useClinicSettings } from '../services/clinicSettingsService';
 import {
@@ -10,7 +10,6 @@ import {
   ModalSelect,
   CancelButton,
   SubmitButton,
-  ModalErrorAlert,
 } from './ModalShell';
 import { cn } from '../utils/cn';
 
@@ -25,6 +24,8 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
   const { settings: clinicSettings } = useClinicSettings();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [successSaved, setSuccessSaved] = useState(false);
 
   // Numéro de dossier prévisualisé
   const [previewNumber] = useState(() => `P-${Math.floor(100 + Math.random() * 900)}`);
@@ -83,16 +84,23 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
     }
   };
 
+  const missingLastName = !formData.last_name.trim();
+  const missingFirstName = !formData.first_name.trim();
+  const missingPhone = !formData.phone.trim();
+  const hasValidationErrors = missingLastName || missingFirstName || missingPhone;
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e && typeof e.preventDefault === 'function') {
       e.preventDefault();
     }
-    console.log('[NewPatientModal] handleSubmit déclenché ! Données saisies :', formData);
+    setHasAttemptedSubmit(true);
 
-    if (!formData.first_name.trim() || !formData.phone.trim()) {
-      const msg = 'Veuillez renseigner au moins le prénom et le numéro de téléphone.';
-      console.warn('[NewPatientModal] Validation échouée :', msg);
-      setErrorMsg(msg);
+    if (hasValidationErrors) {
+      const missingList: string[] = [];
+      if (missingLastName) missingList.push('Nom');
+      if (missingFirstName) missingList.push('Prénom');
+      if (missingPhone) missingList.push('Numéro de téléphone');
+      setErrorMsg(`Champs obligatoires manquants : ${missingList.join(', ')}.`);
       return;
     }
 
@@ -102,16 +110,13 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
     try {
       const now = new Date();
       const patientId = crypto.randomUUID();
-      const fullName = `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim() || formData.first_name.trim();
+      const fullName = `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim();
 
-      console.log('[NewPatientModal] ID généré pour le nouveau patient :', patientId, '| Nom complet :', fullName);
-
-      // 1. Enregistrer l'accompagnant dans la table accompaniers si cochée
+      // 1. Enregistrer l'accompagnant dans la table accompaniers si cochée (sans bloquer en cas d'erreur)
       let createdAccompanierId: string | null = null;
       if (formData.is_accompanied && (formData.accompanier_first_name.trim() || formData.accompanier_last_name.trim() || formData.accompanier_phone.trim())) {
         try {
           const accId = crypto.randomUUID();
-          console.log('[NewPatientModal] Tentative d\'enregistrement de l\'accompagnant :', accId);
           const { error: accErr } = await supabase.from('accompaniers').insert([
             {
               id: accId,
@@ -124,12 +129,9 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
           ]);
           if (!accErr) {
             createdAccompanierId = accId;
-            console.log('[NewPatientModal] Accompagnant enregistré avec succès, ID :', accId);
-          } else {
-            console.warn('[NewPatientModal] Note table accompaniers (ignoré sans bloquer) :', accErr.message);
           }
         } catch (e: any) {
-          console.warn('[NewPatientModal] Note table accompaniers :', e?.message);
+          console.warn('[NewPatientModal] Note table accompaniers (non bloquant):', e?.message);
         }
       }
 
@@ -175,8 +177,6 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
         pregnancy_notes: formData.is_pregnant ? formData.pregnancy_notes : null,
         created_at: now.toISOString(),
       };
-
-      console.log('[NewPatientModal] Envoi du Palier 1 vers Supabase :', fullPatientData);
 
       let { data: newPatients, error } = await supabase
         .from('patients')
@@ -230,19 +230,14 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
             throw res3.error;
           }
           newPatients = res3.data;
-          console.log('[NewPatientModal] Palier 3 réussi !');
         } else {
           newPatients = res2.data;
-          console.log('[NewPatientModal] Palier 2 réussi !');
         }
-      } else {
-        console.log('[NewPatientModal] Palier 1 réussi avec succès !');
       }
 
       const createdPatient = newPatients?.[0] || { id: patientId, name: fullName, first_name: formData.first_name.trim(), last_name: formData.last_name.trim() };
-      console.log('[NewPatientModal] Patient final créé :', createdPatient);
 
-      // 3. Si femme enceinte, enregistrer dans la table pregnancies
+      // 3. Si femme enceinte, enregistrer dans la table pregnancies (non bloquant)
       if (formData.sex === 'F' && formData.is_pregnant && createdPatient) {
         try {
           const accDesc = formData.is_accompanied
@@ -262,7 +257,7 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
         } catch { /* silent */ }
       }
 
-      // 4. Enregistrer la facture de consultation (Payée immédiatement ou en attente)
+      // 4. Enregistrer la facture de consultation (non bloquant)
       if (createdPatient && formData.bill_consultation) {
         try {
           await supabase.from('patient_care_billing').insert([
@@ -300,9 +295,11 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
       }
 
       setLoading(false);
-      console.log('[NewPatientModal] Opération terminée, fermeture du modal.');
-      if (onSuccess) onSuccess();
-      onClose();
+      setSuccessSaved(true);
+      setTimeout(() => {
+        if (onSuccess) onSuccess();
+        onClose();
+      }, 700);
     } catch (err: any) {
       console.error('[NewPatientModal] Erreur lors de la création du patient :', err);
       setErrorMsg(err.message || 'Erreur lors de la création du dossier patient');
@@ -314,7 +311,7 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
     <ModalShell
       icon={<UserPlus className="w-5 h-5 text-blue-300" />}
       title="Enregistrement d'un Nouveau Patient"
-      subtitle="Création de la fiche médicale & intégration à la file d'attente"
+      subtitle="Seuls le Nom, Prénom et Téléphone sont obligatoires"
       color="blue"
       maxWidth="xl"
       onClose={onClose}
@@ -335,7 +332,58 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
       }
     >
       <form id="new-patient-form" onSubmit={handleSubmit} className="space-y-3.5">
-        {errorMsg && <ModalErrorAlert message={errorMsg} />}
+        {/* CARTE D'ERREUR PRÉCISE SI DES CHAMPS OBLIGATOIRES SONT OUBLIÉS */}
+        {hasAttemptedSubmit && hasValidationErrors && (
+          <div className="p-3.5 bg-rose-50 border-2 border-rose-300 rounded-2xl animate-shake">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs font-black text-rose-900">
+                  Attention : Veuillez renseigner les champs obligatoires manquants
+                </p>
+                <p className="text-[11px] text-rose-700 mt-0.5 font-medium">
+                  Seuls ces 3 éléments sont indispensables pour ouvrir le dossier médical :
+                </p>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {missingLastName && (
+                    <span className="px-2.5 py-1 rounded-lg bg-rose-200 text-rose-950 font-black text-xs flex items-center gap-1 shadow-2xs">
+                      ❌ Nom de famille
+                    </span>
+                  )}
+                  {missingFirstName && (
+                    <span className="px-2.5 py-1 rounded-lg bg-rose-200 text-rose-950 font-black text-xs flex items-center gap-1 shadow-2xs">
+                      ❌ Prénom
+                    </span>
+                  )}
+                  {missingPhone && (
+                    <span className="px-2.5 py-1 rounded-lg bg-rose-200 text-rose-950 font-black text-xs flex items-center gap-1 shadow-2xs">
+                      ❌ Numéro de téléphone
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CARTE DE SUCCÈS LORS DE L'ENREGISTREMENT */}
+        {successSaved && (
+          <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-2xl flex items-center gap-3 animate-scale-in">
+            <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-black text-emerald-950">Patient Enregistré avec Succès ! 🎉</p>
+              <p className="text-xs text-emerald-800 font-semibold mt-0.5">
+                Le dossier <strong className="font-mono font-black">#{previewNumber}</strong> a été créé et intégré à la file d'attente.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {errorMsg && !hasValidationErrors && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-semibold">
+            {errorMsg}
+          </div>
+        )}
 
         {/* ─── BANNIÈRE APERÇU DU DOSSIER ────────────────────────────────────── */}
         <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 p-3 rounded-2xl border border-blue-200/80 flex items-center justify-between flex-wrap gap-2">
@@ -345,7 +393,7 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
             </div>
             <div>
               <p className="text-xs text-blue-950 font-extrabold flex items-center gap-1.5">
-                <span>{formData.first_name ? `${formData.first_name} ${formData.last_name}` : 'Nouveau Dossier Patient'}</span>
+                <span>{formData.first_name || formData.last_name ? `${formData.first_name} ${formData.last_name}`.trim() : 'Nouveau Dossier Patient'}</span>
                 {formData.age && <span className="text-slate-500 font-semibold text-[11px]">({formData.age} ans)</span>}
               </p>
               <p className="text-[11px] text-slate-500 font-medium">
@@ -358,25 +406,28 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
           </span>
         </div>
 
-        {/* ─── SECTION 1: ÉTAT CIVIL & CONTACT ────────────────────────────────── */}
-        <FormSection title="1. État Civil & Coordonnées" icon={<User className="w-4 h-4 text-blue-600" />}>
+        {/* ─── SECTION 1: ÉTAT CIVIL & CONTACT (3 CHAMPS OBLIGATOIRES) ────────── */}
+        <FormSection title="1. Identité & Coordonnées (3 Champs Obligatoires)" icon={<User className="w-4 h-4 text-blue-600" />}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField label="Nom de Famille" required>
+              <ModalInput
+                accent="blue"
+                required
+                placeholder="Ex: Diallo, Benali, Sow..."
+                value={formData.last_name}
+                onChange={e => setFormData({ ...formData, last_name: e.target.value })}
+                className={hasAttemptedSubmit && missingLastName ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/30' : ''}
+              />
+            </FormField>
+
             <FormField label="Prénom du Patient" required>
               <ModalInput
                 accent="blue"
                 required
-                placeholder="Ex: Mohamed, Amina..."
+                placeholder="Ex: Mohamed, Amina, Mamadou..."
                 value={formData.first_name}
                 onChange={e => setFormData({ ...formData, first_name: e.target.value })}
-              />
-            </FormField>
-
-            <FormField label="Nom de Famille">
-              <ModalInput
-                accent="blue"
-                placeholder="Ex: Benali, Mansouri..."
-                value={formData.last_name}
-                onChange={e => setFormData({ ...formData, last_name: e.target.value })}
+                className={hasAttemptedSubmit && missingFirstName ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/30' : ''}
               />
             </FormField>
           </div>
@@ -387,13 +438,14 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
                 accent="blue"
                 required
                 type="tel"
-                placeholder="06 12 34 56 78"
+                placeholder="Ex: 06 12 34 56 78"
                 value={formData.phone}
                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                className={hasAttemptedSubmit && missingPhone ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/30' : ''}
               />
             </FormField>
 
-            <FormField label="Âge (Années)">
+            <FormField label="Âge (Optionnel)">
               <ModalInput
                 accent="blue"
                 type="number"
@@ -405,7 +457,7 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
               />
             </FormField>
 
-            <FormField label="Sexe">
+            <FormField label="Sexe (Optionnel)">
               <ModalSelect
                 accent="blue"
                 value={formData.sex}
@@ -516,9 +568,9 @@ export function NewPatientModal({ onClose, onSuccess }: NewPatientModalProps) {
         </FormSection>
 
         {/* ─── SECTION 2: MOTIF & ÉTAT D'ARRIVÉE ───────────────────────────────── */}
-        <FormSection title="2. Motif d'Accueil & État Clinique" icon={<Activity className="w-4 h-4 text-blue-600" />}>
+        <FormSection title="2. Motif d'Accueil & État Clinique (Optionnel)" icon={<Activity className="w-4 h-4 text-blue-600" />}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FormField label="Motif Principal" required>
+            <FormField label="Motif Principal">
               <ModalSelect
                 accent="blue"
                 value={formData.visit_reason}

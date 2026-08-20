@@ -209,44 +209,82 @@ export function PatientProfile({ patientId, onClose, onNewPrescription, onNewLab
   const unpaidBills = careBills.filter(b => b.status === 'en_attente');
   const unpaidTotal = unpaidBills.reduce((sum, b) => sum + (Number(b.total_price) || 0), 0);
 
-  // ─── IMPRESSION COMPLÈTE DU DOSSIER PATIENT (A4 OFFICIEL) ─────────────────
+  // Calcul du nombre de venues / visites distinctes
+  const visitDates = new Set<string>();
+  if (patient?.created_at) visitDates.add(new Date(patient.created_at).toISOString().split('T')[0]);
+  appointments.forEach(a => { if (a.appointment_date) visitDates.add(new Date(a.appointment_date).toISOString().split('T')[0]); });
+  vitals.forEach(v => { if (v.created_at) visitDates.add(new Date(v.created_at).toISOString().split('T')[0]); });
+  careBills.forEach(b => { if (b.created_at) visitDates.add(new Date(b.created_at).toISOString().split('T')[0]); });
+  const totalVisitsCount = Math.max(1, visitDates.size);
+
+  const firstVisitDate = patient?.created_at ? new Date(patient.created_at).toLocaleDateString('fr-FR') : '-';
+  const lastVisitDate = appointments[0]?.appointment_date 
+    ? new Date(appointments[0].appointment_date).toLocaleDateString('fr-FR')
+    : (vitals[0]?.created_at ? new Date(vitals[0].created_at).toLocaleDateString('fr-FR') : firstVisitDate);
+
+  // ─── IMPRESSION COMPLÈTE DU DOSSIER PATIENT (A4 OFFICIEL SUR 2 PAGES) ──────
   const handlePrintMedicalRecord = () => {
     if (!patient) return;
     const settings = getClinicSettings();
-    const printWindow = window.open('', '_blank', 'width=900,height=800');
+    const printWindow = window.open('', '_blank', 'width=950,height=850');
     if (!printWindow) return;
 
     const vitalsHtml = vitals.length > 0
-      ? vitals.map(v => `
+      ? vitals.slice(0, 8).map(v => `
         <tr>
-          <td>${new Date(v.created_at).toLocaleString('fr-FR')}</td>
+          <td>${new Date(v.created_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
           <td><strong>${v.tension || '-'}</strong></td>
           <td>${v.temp ? v.temp + ' °C' : '-'}</td>
           <td>${v.pouls ? v.pouls + ' bpm' : '-'}</td>
           <td>${v.poids ? v.poids + ' kg' : '-'}</td>
         </tr>
       `).join('')
-      : '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">Aucune constante enregistrée</td></tr>';
+      : '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:8px;">Aucune constante enregistrée</td></tr>';
 
-    const prescriptionsHtml = prescriptions.length > 0
-      ? prescriptions.map(p => `
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:8px;">
-          <div style="font-weight:bold; font-size:12px; color:#1e293b;">Ordonnance du ${new Date(p.created_at).toLocaleDateString('fr-FR')} - Dr. ${p.doctor_name || 'Médecin'}</div>
-          <div style="font-size:11px; color:#475569; margin-top:4px;">
-            ${(p.items || []).map((i: any) => `• <strong>${i.name || i.medicine_name}</strong> - ${i.dosage || ''} (${i.duration || ''})`).join('<br/>')}
+    const diagnosticsHtml = diagnostics.length > 0
+      ? diagnostics.map(d => `
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:8px 10px; margin-bottom:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="font-size:12px; color:#0f172a;">${d.disease_name}</strong>
+            <span style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:#e2e8f0; color:#334155;">
+              ${d.severity ? d.severity.toUpperCase() : 'STANDARD'} · ${d.evolution_status || 'En cours'}
+            </span>
           </div>
+          <div style="font-size:11px; color:#475569; margin-top:2px;">
+            Catégorie : <strong>${d.category || 'Général'}</strong> · Dr. ${d.doctor_name || 'Médecin'} · ${new Date(d.created_at).toLocaleDateString('fr-FR')}
+          </div>
+          ${d.notes ? `<div style="font-size:10px; color:#64748b; font-style:italic; margin-top:2px;">« ${d.notes} »</div>` : ''}
         </div>
       `).join('')
-      : '<p style="color:#94a3b8; font-size:12px;">Aucune ordonnance émise</p>';
+      : '<p style="color:#94a3b8; font-size:11px; margin:4px 0;">Aucun diagnostic formel enregistré</p>';
 
     const labsHtml = labs.length > 0
       ? labs.map(l => `
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:8px;">
-          <div style="font-weight:bold; font-size:12px; color:#1e293b;">${l.test_name} - <span style="color:#059669;">${l.status === 'termine' ? '✅ Résultats disponibles' : '⏳ En attente'}</span></div>
-          ${l.results_text ? `<div style="font-size:11px; color:#0f766e; background:#f0fdf4; padding:6px; border-radius:4px; margin-top:4px;"><strong>Résultat :</strong> ${l.results_text}</div>` : ''}
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:8px 10px; margin-bottom:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="font-size:12px; color:#14532d;">🔬 ${l.test_name}</strong>
+            <span style="font-size:10px; font-weight:bold; color:#15803d;">
+              ${l.status === 'termine' ? '✅ Résultats Validés' : '⏳ En attente'}
+            </span>
+          </div>
+          ${l.results_text ? `<div style="font-size:11px; color:#047857; margin-top:3px; background:#ffffff; padding:4px 8px; border-radius:4px; border:1px solid #d1fae5;"><strong>Résultats :</strong> ${l.results_text}</div>` : '<div style="font-size:10px; color:#6b7280; margin-top:2px;">Prélèvement en cours d\'analyse</div>'}
         </div>
       `).join('')
-      : '<p style="color:#94a3b8; font-size:12px;">Aucun examen de laboratoire</p>';
+      : '<p style="color:#94a3b8; font-size:11px; margin:4px 0;">Aucun examen de laboratoire</p>';
+
+    const prescriptionsHtml = prescriptions.length > 0
+      ? prescriptions.map((p, idx) => `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:4px; margin-bottom:6px;">
+            <strong style="font-size:12px; color:#1e293b;">💊 Ordonnance N° ${idx + 1} du ${new Date(p.created_at).toLocaleDateString('fr-FR')}</strong>
+            <span style="font-size:11px; color:#64748b;">Dr. ${p.doctor_name || 'Médecin Traitant'}</span>
+          </div>
+          <div style="font-size:11px; color:#334155; line-height:1.5;">
+            ${(p.items || []).map((i: any) => `• <strong>${i.name || i.medicine_name}</strong> : ${i.dosage || 'Selon prescription'} ${i.duration ? `(${i.duration})` : ''} ${i.instructions ? `— <em>${i.instructions}</em>` : ''}`).join('<br/>')}
+          </div>
+        </div>
+      `).join('')
+      : '<p style="color:#94a3b8; font-size:11px; margin:4px 0;">Aucune ordonnance émise</p>';
 
     const billsHtml = careBills.length > 0
       ? careBills.map(b => `
@@ -262,7 +300,7 @@ export function PatientProfile({ patientId, onClose, onNewPrescription, onNewLab
           </td>
         </tr>
       `).join('')
-      : '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">Aucun soin facturé</td></tr>';
+      : '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:8px;">Aucun soin facturé</td></tr>';
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -271,119 +309,220 @@ export function PatientProfile({ patientId, onClose, onNewPrescription, onNewLab
         <title>Dossier Médical - ${patient.first_name} ${patient.last_name || patient.name}</title>
         <meta charset="utf-8" />
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 25px; color: #1e293b; font-size: 13px; line-height: 1.5; }
-          .header { border-bottom: 2px solid #0f766e; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
-          .clinic-title { font-size: 20px; font-weight: 900; color: #0f766e; }
-          .clinic-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
-          .dossier-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px; margin-bottom: 20px; }
-          .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-          .label { font-size: 10px; text-transform: uppercase; font-weight: bold; color: #64748b; }
-          .val { font-size: 13px; font-weight: bold; color: #0f172a; }
-          .section-title { font-size: 14px; font-weight: 900; color: #0f766e; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-top: 20px; margin-bottom: 10px; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 12px; }
-          th { background: #f1f5f9; text-align: left; padding: 8px; border-bottom: 1px solid #cbd5e1; font-weight: bold; }
-          td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
-          .footer { margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 15px; text-align: center; font-size: 10px; color: #94a3b8; }
+          * { box-sizing: border-box; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; color: #1e293b; font-size: 12px; line-height: 1.4; }
+          
+          .page { page-break-after: always; padding-bottom: 20px; }
+          .page:last-child { page-break-after: avoid; }
+          .page-break { page-break-before: always; }
+          
+          .header { border-bottom: 2px solid #0f766e; padding-bottom: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-start; }
+          .clinic-title { font-size: 18px; font-weight: 900; color: #0f766e; }
+          .clinic-sub { font-size: 10px; color: #64748b; margin-top: 1px; }
+          
+          .card-box { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+          .card-box-highlight { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+          
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+          .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+          .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+          
+          .label { font-size: 9px; text-transform: uppercase; font-weight: bold; color: #64748b; }
+          .val { font-size: 12px; font-weight: bold; color: #0f172a; margin-top: 1px; }
+          
+          .section-title { font-size: 12px; font-weight: 900; color: #0f766e; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; margin-top: 12px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+          
+          table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 11px; }
+          th { background: #f1f5f9; text-align: left; padding: 6px 8px; border-bottom: 1px solid #cbd5e1; font-weight: bold; color: #475569; font-size: 10px; text-transform: uppercase; }
+          td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
+          
+          .footer { margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: #94a3b8; }
+          
           @media print {
             body { padding: 0; }
-            @page { margin: 15mm; }
+            @page { margin: 12mm 15mm; size: A4; }
+            .page-break { page-break-before: always; }
           }
         </style>
       </head>
       <body>
-        <div class="header">
-          <div>
-            <div class="clinic-title">${settings.clinicName || 'CLINIQUE MÉDICALE AL-SHIFA'}</div>
-            <div class="clinic-sub">${settings.clinicAddress || 'Plateau Médical'}, ${settings.city || 'Abidjan'} - ${settings.country || "Côte d'Ivoire"}</div>
-            <div class="clinic-sub">Tél: ${settings.clinicPhone || '+225 07 00 00 00 00'} | Email: ${settings.clinicEmail || 'contact@clinique-alshifa.com'}</div>
+
+        <!-- =================================================================== -->
+        <!-- PAGE 1 : SYNTHÈSE MÉDICALE, PROFIL, VENUES, CONSTANTES & LABO       -->
+        <!-- =================================================================== -->
+        <div class="page">
+          <div class="header">
+            <div>
+              <div class="clinic-title">${settings.clinicName || 'CLINIQUE MÉDICALE AL-SHIFA'}</div>
+              <div class="clinic-sub">${settings.clinicAddress || 'Plateau Médical'}, ${settings.city || 'Centre Ville'} - ${settings.country || 'Mauritanie'}</div>
+              <div class="clinic-sub">Tél: ${settings.clinicPhone || '+222 45 00 00 00'} | Email: ${settings.clinicEmail || 'contact@clinique-alshifa.com'}</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 15px; font-weight: 900; color: #0f766e;">DOSSIER MÉDICAL</div>
+              <div style="font-family: monospace; font-weight: bold; font-size: 12px; color: #0f172a;">#${patient.patient_number || patient.id.slice(0, 8).toUpperCase()}</div>
+              <div style="font-size: 9px; color: #64748b;">Édité le ${new Date().toLocaleString('fr-FR')}</div>
+            </div>
           </div>
-          <div style="text-align: right;">
-            <div style="font-size: 16px; font-weight: 900; color: #0f766e;">DOSSIER MÉDICAL</div>
-            <div style="font-family: monospace; font-weight: bold; font-size: 12px;">#${patient.patient_number || patient.id.slice(0, 8).toUpperCase()}</div>
-            <div style="font-size: 10px; color: #64748b;">Édité le ${new Date().toLocaleString('fr-FR')}</div>
+
+          <!-- 1. IDENTITÉ DU PATIENT -->
+          <div class="card-box-highlight">
+            <div class="grid-3">
+              <div>
+                <div class="label">Patient (Nom & Prénom)</div>
+                <div class="val">${patient.first_name} ${patient.last_name || patient.name}</div>
+              </div>
+              <div>
+                <div class="label">Âge / Sexe</div>
+                <div class="val">${patient.age ? patient.age + ' ans' : 'Non précisé'} / ${patient.sex === 'M' ? 'Masculin (M)' : patient.sex === 'F' ? 'Féminin (F)' : 'Non précisé'}</div>
+              </div>
+              <div>
+                <div class="label">Groupe Sanguin</div>
+                <div class="val" style="color:#e11d48;">🩸 ${patient.blood || 'Non précisé'}</div>
+              </div>
+            </div>
+
+            <div class="grid-3" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #bbf7d0;">
+              <div>
+                <div class="label">N° Téléphone</div>
+                <div class="val">${patient.phone || '-'}</div>
+              </div>
+              <div>
+                <div class="label">Ville / Pays</div>
+                <div class="val">${patient.city ? `${patient.city}, ${patient.country || ''}` : patient.country || 'Mauritanie'}</div>
+              </div>
+              <div>
+                <div class="label">Proche Accompagnant</div>
+                <div class="val">${patient.is_accompanied ? `${patient.accompanier_first_name || ''} ${patient.accompanier_last_name || ''} (${patient.accompanier_relationship || 'Proche'})` : 'Aucun'}</div>
+              </div>
+            </div>
+
+            ${patient.allergies ? `
+              <div style="margin-top:6px; font-size:10px; color:#b91c1c; font-weight:bold;">
+                ⚠️ Allergies / Précautions : ${patient.allergies}
+              </div>
+            ` : ''}
+
+            ${patient.is_pregnant ? `
+              <div style="margin-top:6px; padding:5px 8px; background:#fdf2f8; border:1px solid #fbcfe8; border-radius:6px; color:#9d174d; font-size:11px;">
+                🤰 <strong>PATIENTE ENCEINTE (SUIVI CPN) :</strong> ${patient.pregnancy_months ? patient.pregnancy_months + ' mois' : ''} ${patient.pregnancy_weeks ? '(' + patient.pregnancy_weeks + ' SA)' : ''} ${patient.dpa ? '· DPA prévue : ' + patient.dpa : ''}
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- 2. HISTORIQUE DE FRÉQUENTATION & ADMISSION -->
+          <div class="section-title">1. Historique de Fréquentation & État d'Accueil</div>
+          <div class="card-box">
+            <div class="grid-4">
+              <div>
+                <div class="label">Nombre de venues</div>
+                <div class="val" style="color:#0f766e;">🏥 ${totalVisitsCount} visite(s)</div>
+              </div>
+              <div>
+                <div class="label">Première venue</div>
+                <div class="val">${firstVisitDate}</div>
+              </div>
+              <div>
+                <div class="label">Dernière visite</div>
+                <div class="val">${lastVisitDate}</div>
+              </div>
+              <div>
+                <div class="label">État à l'arrivée / Motif</div>
+                <div class="val"><span style="color:${patient.arrival_status === 'urgent' ? '#e11d48' : '#059669'};">${patient.arrival_status ? patient.arrival_status.toUpperCase() : 'STABLE'}</span> · ${patient.visit_reason || 'Consultation'}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. CONSTANTES VITALES -->
+          <div class="section-title">2. Évolution des Constantes Vitales</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date & Heure</th>
+                <th>Tension Artérielle</th>
+                <th>Température</th>
+                <th>Pouls (bpm)</th>
+                <th>Poids (kg)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${vitalsHtml}
+            </tbody>
+          </table>
+
+          <!-- 4. PATHOLOGIES & DIAGNOSTICS -->
+          <div class="section-title">3. Pathologies & Diagnostics Médicaux</div>
+          ${diagnosticsHtml}
+
+          <!-- 5. EXAMENS DE LABORATOIRE -->
+          <div class="section-title">4. Examens & Résultats de Laboratoire</div>
+          ${labsHtml}
+
+          <div class="footer">
+            <span>Dossier #${patient.patient_number || patient.id.slice(0, 8)} · ${patient.first_name} ${patient.last_name || patient.name}</span>
+            <span>Page 1 sur 2</span>
+            <span>${settings.clinicName || 'Clinique Médicale Al-Shifa'}</span>
           </div>
         </div>
 
-        <div class="dossier-box">
-          <div class="grid">
+        <!-- =================================================================== -->
+        <!-- PAGE 2 : ORDONNANCES, TRAITEMENTS, SOINS FACTURÉS & SIGNATURE       -->
+        <!-- =================================================================== -->
+        <div class="page page-break">
+          <div class="header">
             <div>
-              <div class="label">Nom complet du patient</div>
-              <div class="val">${patient.first_name} ${patient.last_name || patient.name}</div>
+              <div class="clinic-title">${settings.clinicName || 'CLINIQUE MÉDICALE AL-SHIFA'}</div>
+              <div class="clinic-sub">Volet Traitements Médicaux, Ordonnances & Actes de Soins</div>
             </div>
-            <div>
-              <div class="label">Âge / Sexe</div>
-              <div class="val">${patient.age ? patient.age + ' ans' : '-'} / ${patient.sex === 'M' ? 'Masculin (M)' : 'Féminin (F)'}</div>
-            </div>
-            <div>
-              <div class="label">Groupe Sanguin</div>
-              <div class="val" style="color:#e11d48;">🩸 ${patient.blood || 'Non précisé'}</div>
-            </div>
-            <div>
-              <div class="label">Téléphone</div>
-              <div class="val">${patient.phone || '-'}</div>
-            </div>
-            <div>
-              <div class="label">État à l'arrivée</div>
-              <div class="val">${patient.arrival_status ? patient.arrival_status.toUpperCase() : 'STABLE'}</div>
-            </div>
-            <div>
-              <div class="label">Date d'admission</div>
-              <div class="val">${new Date(patient.created_at).toLocaleDateString('fr-FR')}</div>
+            <div style="text-align: right;">
+              <div style="font-size: 13px; font-weight: bold; color: #0f766e;">VOLET TRAITEMENTS & ACTES</div>
+              <div style="font-family: monospace; font-size: 11px;">#${patient.patient_number || patient.id.slice(0, 8).toUpperCase()} · ${patient.first_name} ${patient.last_name || patient.name}</div>
             </div>
           </div>
-          ${patient.is_pregnant ? `
-            <div style="margin-top:10px; padding:8px; background:#fdf2f8; border:1px solid #fbcfe8; border-radius:8px; color:#9d174d; font-size:12px;">
-              <strong>🤰 PATIENTE ENCEINTE (SUIVI CPN) :</strong> ${patient.pregnancy_months ? patient.pregnancy_months + ' mois' : ''} ${patient.pregnancy_weeks ? '(' + patient.pregnancy_weeks + ' SA)' : ''} ${patient.dpa ? '· DPA prévue : ' + patient.dpa : ''}
+
+          <!-- 6. ORDONNANCES MÉDICALES DÉTAILLÉES -->
+          <div class="section-title">5. Ordonnances & Traitements Médicaux Prescrits</div>
+          ${prescriptionsHtml}
+
+          <!-- 7. SOINS FACTURÉS & CAISSE -->
+          <div class="section-title">6. Actes de Soins Dispensés & Facturation</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Acte / Soin Infirmer</th>
+                <th style="text-align:center;">Quantité</th>
+                <th style="text-align:right;">Montant</th>
+                <th style="text-align:center;">Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${billsHtml}
+            </tbody>
+          </table>
+
+          <!-- 8. OBSERVATIONS MÉDICALES & SIGNATURE -->
+          <div class="section-title">7. Visa Médical & Recommandations</div>
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-top: 10px;">
+            <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; min-height: 80px;">
+              <div class="label">Observations & Consignes du Médecin Traitant</div>
+              <p style="font-size: 10px; color: #64748b; margin-top: 4px; font-style: italic;">
+                Dossier à conserver au service d'archivage médical. Suivi régulier recommandé en cas de symptômes persistants.
+              </p>
             </div>
-          ` : ''}
-          ${patient.allergies ? `
-            <div style="margin-top:8px; font-size:11px; color:#b91c1c;">
-              <strong>⚠️ Allergies / Précautions :</strong> ${patient.allergies}
+            <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; min-height: 80px; text-align: center;">
+              <div class="label">Date, Signature & Cachet</div>
+              <div style="height: 35px;"></div>
+              <div style="font-size: 9px; color: #94a3b8; border-top: 1px dashed #cbd5e1; padding-top: 4px;">Cachet de la Clinique</div>
             </div>
-          ` : ''}
+          </div>
+
+          <div class="footer">
+            <span>Document médical officiel et confidentiel protégé par le secret médical</span>
+            <span>Page 2 sur 2</span>
+            <span>${settings.clinicName || 'Clinique Médicale Al-Shifa'}</span>
+          </div>
         </div>
 
-        <div class="section-title">1. Constantes Vitales & Évolution</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Date & Heure</th>
-              <th>Tension Artérielle</th>
-              <th>Température</th>
-              <th>Pouls</th>
-              <th>Poids</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${vitalsHtml}
-          </tbody>
-        </table>
-
-        <div class="section-title">2. Ordonnances & Traitements Médicaux</div>
-        ${prescriptionsHtml}
-
-        <div class="section-title">3. Examens & Résultats de Laboratoire</div>
-        ${labsHtml}
-
-        <div class="section-title">4. Prestations, Soins Dispensés & Facturation</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Acte / Soin Infirmer</th>
-              <th style="text-align:center;">Quantité</th>
-              <th style="text-align:right;">Montant</th>
-              <th style="text-align:center;">Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${billsHtml}
-          </tbody>
-        </table>
-
-        <div class="footer">
-          Document confidentiel protégé par le secret médical - ${settings.clinicName || 'Clinique Médicale Al-Shifa'}
-        </div>
       </body>
       </html>
     `);
@@ -692,32 +831,70 @@ export function PatientProfile({ patientId, onClose, onNewPrescription, onNewLab
                     )}
                   </div>
                 )}
-                {/* TAB 1: IDENTITÉ */}
+
+                {/* TAB 1: IDENTITÉ & SYNTHÈSE CLINIQUE */}
                 {activeTab === 'identity' && (
                   <div className="space-y-4">
-                    {/* Arrivée & Admission */}
+                    {/* CARTES KPI DE FRÉQUENTATION & VENUES */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="p-4 bg-gradient-to-br from-teal-50 to-emerald-50 rounded-2xl border border-teal-200">
+                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-teal-800 tracking-wider">
+                          <Activity className="w-3.5 h-3.5 text-teal-600" /> Venues / Passages
+                        </div>
+                        <p className="text-xl font-black text-teal-950 mt-1">{totalVisitsCount} venue(s)</p>
+                        <p className="text-[10px] text-teal-700 mt-0.5 font-medium">1ère venue : {firstVisitDate}</p>
+                      </div>
+
+                      <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-blue-800 tracking-wider">
+                          <Clock className="w-3.5 h-3.5 text-blue-600" /> Dernière Visite
+                        </div>
+                        <p className="text-sm font-black text-blue-950 mt-1 truncate">{lastVisitDate}</p>
+                        <p className="text-[10px] text-blue-700 mt-0.5 font-medium">Dossier #{patient.patient_number || patient.id.slice(0, 6)}</p>
+                      </div>
+
+                      <div className="p-4 bg-gradient-to-br from-purple-50 to-fuchsia-50 rounded-2xl border border-purple-200">
+                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-purple-800 tracking-wider">
+                          <Stethoscope className="w-3.5 h-3.5 text-purple-600" /> Motif / Cause
+                        </div>
+                        <p className="text-sm font-black text-purple-950 mt-1 truncate">{patient.visit_reason || 'Consultation'}</p>
+                        <p className="text-[10px] text-purple-700 mt-0.5 font-medium">Accueil & Orientation</p>
+                      </div>
+
+                      <div className="p-4 bg-gradient-to-br from-slate-50 to-emerald-50 rounded-2xl border border-slate-200">
+                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-700 tracking-wider">
+                          <Heart className="w-3.5 h-3.5 text-red-500" /> État Clinique
+                        </div>
+                        <div className="mt-1">
+                          <StatusBadge status={patient.arrival_status || 'stable'} size="sm" />
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1 font-semibold">{patient.blood ? `Groupe : ${patient.blood}` : 'Groupe non spécifié'}</p>
+                      </div>
+                    </div>
+
+                    {/* Arrivée & Coordonnées */}
                     <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-3">
                       <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-teal-600" /> Informations d'Arrivée & Motif
+                        <User className="w-4 h-4 text-teal-600" /> Informations Personnelles & Coordonnées
                       </h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                         <div>
-                          <span className="text-slate-400 block font-semibold">Date & heure d'arrivée</span>
+                          <span className="text-slate-400 block font-semibold">Nom & Prénom</span>
+                          <span className="font-extrabold text-slate-900 mt-0.5 block">{patient.first_name} {patient.last_name || patient.name}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block font-semibold">Âge & Sexe</span>
                           <span className="font-extrabold text-slate-800 mt-0.5 block">
-                            {patient.arrival_time || patient.arrival_at
-                              ? new Date(patient.arrival_time || patient.arrival_at!).toLocaleString('fr-FR')
-                              : 'Non précisé'}
+                            {patient.age ? `${patient.age} ans` : 'Non précisé'} · {patient.sex === 'M' ? 'Homme (M)' : patient.sex === 'F' ? 'Femme (F)' : 'Non précisé'}
                           </span>
                         </div>
                         <div>
-                          <span className="text-slate-400 block font-semibold">État clinique</span>
-                          <div className="mt-1">
-                            <StatusBadge status={patient.arrival_status || 'stable'} />
-                          </div>
+                          <span className="text-slate-400 block font-semibold">N° Téléphone</span>
+                          <span className="font-extrabold font-mono text-teal-700 mt-0.5 block">{patient.phone || '-'}</span>
                         </div>
                         <div>
-                          <span className="text-slate-400 block font-semibold">Motif de consultation</span>
-                          <span className="font-extrabold text-slate-800 mt-0.5 block">{patient.visit_reason || 'Non renseigné'}</span>
+                          <span className="text-slate-400 block font-semibold">Localisation</span>
+                          <span className="font-extrabold text-slate-800 mt-0.5 block">{patient.city ? `${patient.city}, ${patient.country || ''}` : patient.country || 'Mauritanie'}</span>
                         </div>
                       </div>
                     </div>
@@ -729,12 +906,12 @@ export function PatientProfile({ patientId, onClose, onNewPrescription, onNewLab
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                         <div className="p-4 bg-red-50/70 rounded-2xl border border-red-200">
-                          <span className="text-red-700 font-black block mb-1">Allergies connues</span>
+                          <span className="text-red-700 font-black block mb-1">Allergies signalées</span>
                           <p className="text-slate-800 font-bold">{patient.allergies || 'Aucune allergie signalée'}</p>
                         </div>
                         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
                           <span className="text-slate-600 font-black block mb-1">Groupe Sanguin</span>
-                          <p className="text-slate-900 font-black text-sm">{patient.blood || 'Non spécifié'}</p>
+                          <p className="text-slate-900 font-black text-sm">{patient.blood ? `🩸 ${patient.blood}` : 'Non renseigné'}</p>
                         </div>
                       </div>
                     </div>
@@ -767,6 +944,55 @@ export function PatientProfile({ patientId, onClose, onNewPrescription, onNewLab
                         </div>
                       </div>
                     )}
+
+                    {/* Synthèse rapide des derniers bilans */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                            <Activity className="w-3.5 h-3.5 text-teal-600" /> Dernières Constantes
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('vitals')}
+                            className="text-[11px] font-extrabold text-teal-700 hover:underline cursor-pointer"
+                          >
+                            Voir tout ({vitals.length}) →
+                          </button>
+                        </div>
+                        {vitals[0] ? (
+                          <div className="text-xs space-y-1 text-slate-600 bg-slate-50 p-2.5 rounded-xl">
+                            <p>Tension : <strong className="text-slate-900">{vitals[0].tension}</strong> · Temp : <strong className="text-slate-900">{vitals[0].temp} °C</strong></p>
+                            <p>Pouls : <strong className="text-slate-900">{vitals[0].pouls} bpm</strong> · Poids : <strong className="text-slate-900">{vitals[0].poids} kg</strong></p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-400 italic">Aucune constante enregistrée.</p>
+                        )}
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                            <FlaskConical className="w-3.5 h-3.5 text-cyan-600" /> Dernier Examen Labo
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('labs')}
+                            className="text-[11px] font-extrabold text-cyan-700 hover:underline cursor-pointer"
+                          >
+                            Voir tout ({labs.length}) →
+                          </button>
+                        </div>
+                        {labs[0] ? (
+                          <div className="text-xs space-y-1 text-slate-600 bg-slate-50 p-2.5 rounded-xl">
+                            <p className="font-bold text-slate-900">{labs[0].test_name}</p>
+                            <p className="text-[11px] text-teal-800">{labs[0].results_text || 'En attente des conclusions'}</p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-400 italic">Aucun examen de laboratoire.</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
 

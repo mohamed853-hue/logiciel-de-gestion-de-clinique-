@@ -9,6 +9,7 @@ import {
   SubmitButton,
 } from './ModalShell';
 import { getClinicSettings, saveClinicSettings, compressImageToDataUrl, type ClinicSettings } from '../services/clinicSettingsService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ClinicSettingsModalProps {
   onClose: () => void;
@@ -16,12 +17,17 @@ interface ClinicSettingsModalProps {
 }
 
 export function ClinicSettingsModal({ onClose, onSaved }: ClinicSettingsModalProps) {
+  const { user } = useAuth();
   const [settings, setSettings] = useState<ClinicSettings>(getClinicSettings);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [compressingLogo, setCompressingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  if (user?.role !== 'admin') {
+    return null;
+  }
 
   const handleLogoFile = async (file: File) => {
     if (!file) return;

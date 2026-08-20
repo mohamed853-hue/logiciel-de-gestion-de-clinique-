@@ -44,7 +44,6 @@ const navigationItems: Record<UserRole, Array<{ name: string; icon: React.ReactN
     { name: 'Caisse & Factures', icon: <CreditCard className="w-5 h-5" />, tab: 'cashier' },
     { name: 'Historique', icon: <ClipboardList className="w-5 h-5" />, tab: 'history' },
     { name: 'Statistiques', icon: <BarChart3 className="w-5 h-5" />, tab: 'stats' },
-    { name: 'Paramètres', icon: <Settings className="w-5 h-5" />, tab: 'settings' },
   ],
 
   medecin: [
@@ -169,18 +168,22 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const handleTabChange = (event: CustomEvent) => {
       if (event.detail === 'settings') {
-        setShowSettingsModal(true);
+        if (user?.role === 'admin') {
+          setShowSettingsModal(true);
+        }
         return;
       }
       setActiveTab(event.detail);
     };
     window.addEventListener('changeTab', handleTabChange as EventListener);
     return () => window.removeEventListener('changeTab', handleTabChange as EventListener);
-  }, []);
+  }, [user]);
 
   const handleNavClick = (tab: string) => {
     if (tab === 'settings') {
-      setShowSettingsModal(true);
+      if (user?.role === 'admin') {
+        setShowSettingsModal(true);
+      }
       return;
     }
     setActiveTab(tab);
@@ -480,15 +483,17 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 <span className="font-bold">{language === 'fr' ? 'العربية' : 'Français'}</span>
               </button>
 
-              {/* Settings Button */}
-              <button
-                type="button"
-                onClick={() => setShowSettingsModal(true)}
-                className="p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-700 cursor-pointer"
-                title="Paramètres de la clinique & Tarifs"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
+              {/* Settings Button (Réservé UNIQUEMENT au Super Admin / Admin) */}
+              {user.role === 'admin' && (
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsModal(true)}
+                  className="p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-700 cursor-pointer"
+                  title="Paramètres de la clinique & Tarifs (Admin)"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+              )}
 
               {/* Avatar */}
               <div className={cn(
@@ -507,8 +512,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* Paramètres Clinique Modal */}
-      {showSettingsModal && (
+      {/* Paramètres Clinique Modal (Uniquement si Admin) */}
+      {showSettingsModal && user.role === 'admin' && (
         <ClinicSettingsModal
           onClose={() => setShowSettingsModal(false)}
           onSaved={(newSettings) => setClinicSettings(newSettings)}
