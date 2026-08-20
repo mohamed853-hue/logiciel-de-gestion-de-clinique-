@@ -19,7 +19,8 @@ import {
   AlertTriangle, 
   Stethoscope, 
   Heart, 
-  CreditCard, 
+  CreditCard,
+  FileText,
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { supabase } from '../services/supabase';
@@ -33,8 +34,10 @@ import {
   SubmitButton,
 } from '../components/ModalShell';
 import { AppointmentModal } from '../components/AppointmentModal';
+import { AdminReportsTab } from '../components/AdminReportsTab';
 import { useLanguage } from '../hooks/useLanguage';
 import { getPatientDiagnostics, updateDiagnosticEvolution } from '../services/pathologyService';
+import type { GynAccouchement } from '../types';
 import {
   ResponsiveContainer,
   PieChart,
@@ -61,7 +64,7 @@ interface AppUser {
   last_login?: string;
 }
 
-type TabType = 'overview' | 'pathologies' | 'demographics' | 'financial' | 'users' | 'activity';
+type TabType = 'overview' | 'reports' | 'pathologies' | 'demographics' | 'financial' | 'users' | 'activity';
 type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'year';
 
 const ROLE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -83,6 +86,11 @@ export function AdminDashboard() {
   const [diagnostics, setDiagnostics] = useState<PatientDiagnostic[]>([]);
   const [carePayments, setCarePayments] = useState<any[]>([]);
   const [pharmacySales, setPharmacySales] = useState<any[]>([]);
+  const [births, setBirths] = useState<GynAccouchement[]>([]);
+  const [pharmacyStock, setPharmacyStock] = useState<any[]>([]);
+  const [pharmacyMovements, setPharmacyMovements] = useState<any[]>([]);
+  const [caisseExpenses, setCaisseExpenses] = useState<any[]>([]);
+  const [labTests, setLabTests] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [pathologySearch, setPathologySearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -107,7 +115,8 @@ export function AdminDashboard() {
   useEffect(() => {
     const handleTabChange = (event: CustomEvent) => {
       const path = event.detail;
-      if (path === 'users' || path === '/dashboard/users') setActiveTab('users');
+      if (path === 'reports' || path === '/dashboard/reports') setActiveTab('reports');
+      else if (path === 'users' || path === '/dashboard/users') setActiveTab('users');
       else if (path === 'pathologies' || path === '/dashboard/pathologies') setActiveTab('pathologies');
       else if (path === 'demographics') setActiveTab('demographics');
       else if (path === 'financial') setActiveTab('financial');
@@ -125,12 +134,17 @@ export function AdminDashboard() {
 
   const loadData = async () => {
     try {
-      const [uRes, pRes, payRes, pharmRes, diagList] = await Promise.all([
+      const [uRes, pRes, payRes, pharmRes, diagList, bRes, stRes, movRes, expRes, labRes] = await Promise.all([
         supabase.from('app_users').select('*').order('created_at', { ascending: false }),
         supabase.from('patients').select('*').order('created_at', { ascending: false }).limit(500),
         supabase.from('care_payments').select('*').order('created_at', { ascending: false }).limit(200),
         supabase.from('pharmacy_sales').select('*').order('created_at', { ascending: false }).limit(200),
         getPatientDiagnostics(),
+        supabase.from('gyn_accouchements').select('*').order('created_at', { ascending: false }),
+        supabase.from('pharmacy_stock').select('*').order('created_at', { ascending: false }),
+        supabase.from('pharmacy_movements').select('*').order('created_at', { ascending: false }).limit(200),
+        supabase.from('caisse_depenses').select('*').order('created_at', { ascending: false }).limit(200),
+        supabase.from('lab_tests').select('*').order('created_at', { ascending: false }).limit(200),
       ]);
 
       setUsersList(uRes.data || []);
@@ -138,6 +152,18 @@ export function AdminDashboard() {
       setCarePayments(payRes.data || []);
       setPharmacySales(pharmRes.data || []);
       setDiagnostics(diagList || []);
+
+      if (bRes.data && bRes.data.length > 0) {
+        setBirths(bRes.data);
+      } else {
+        const cachedBirths = localStorage.getItem('al_shifa_births');
+        if (cachedBirths) setBirths(JSON.parse(cachedBirths));
+      }
+
+      setPharmacyStock(stRes.data || []);
+      setPharmacyMovements(movRes.data || []);
+      setCaisseExpenses(expRes.data || []);
+      setLabTests(labRes.data || []);
     } catch (e) {
       console.error('Error loading super admin data:', e);
     }
@@ -483,6 +509,7 @@ export function AdminDashboard() {
       <div className="flex gap-2 border-b border-slate-200 overflow-x-auto pb-px">
         {[
           { id: 'overview', label: isArabic ? 'نظرة شاملة ومخططات' : 'Vue d\'Ensemble & Graphiques', icon: <BarChart3 className="w-4 h-4" /> },
+          { id: 'reports', label: isArabic ? 'التقارير والكشوفات (A4)' : 'Rapports & Synthèses (A4)', icon: <FileText className="w-4 h-4 text-teal-600" /> },
           { id: 'pathologies', label: isArabic ? `الأمراض والأوبئة (${diagnostics.length})` : `Pathologies & Épidémiologie (${diagnostics.length})`, icon: <Stethoscope className="w-4 h-4" /> },
           { id: 'demographics', label: isArabic ? `الديموغرافيا (${totalPatientsCount})` : `Démographie Patients (${totalPatientsCount})`, icon: <Users className="w-4 h-4" /> },
           { id: 'financial', label: isArabic ? 'الحصيلة المالية والمداخيل' : 'Bilan Financier & Recettes', icon: <CreditCard className="w-4 h-4" /> },
@@ -654,7 +681,24 @@ export function AdminDashboard() {
       )}
 
       {/* ════════════════════════════════════════════════════════════════════════
-          ONGLET 2 : PATHOLOGIES & ÉPIDÉMIOLOGIE DÉTAILLÉE
+          ONGLET 2 : RAPPORTS & SYNTHÈSES OFFICIELLES (A4)
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'reports' && (
+        <AdminReportsTab
+          patients={patients}
+          diagnostics={diagnostics}
+          carePayments={carePayments}
+          pharmacySales={pharmacySales}
+          pharmacyStock={pharmacyStock}
+          pharmacyMovements={pharmacyMovements}
+          caisseExpenses={caisseExpenses}
+          labTests={labTests}
+          births={births}
+        />
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════════
+          ONGLET 3 : PATHOLOGIES & ÉPIDÉMIOLOGIE DÉTAILLÉE
       ═══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'pathologies' && (
         <div className="space-y-6">

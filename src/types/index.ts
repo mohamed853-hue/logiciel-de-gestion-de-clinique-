@@ -276,13 +276,29 @@ export interface GynAccouchement {
   id: string;
   grossesse_id?: string;
   patient_id: string;
-  date_accouchement: string;
-  type_accouchement: 'voie_basse' | 'cesarienne';
-  sexe_bebe?: string;
+  mother_name?: string;
+  mother_phone?: string;
+  nom_bebe?: string;
+  prenom_bebe?: string;
+  sexe_bebe?: 'M' | 'F' | string;
+  date_naissance: string;
+  heure_naissance?: string;
   poids_bebe_grammes?: number;
-  observations?: string;
+  taille_cm?: number;
+  perimetre_cranien_cm?: number;
+  type_accouchement: 'voie_basse' | 'cesarienne' | 'forceps' | 'siege' | string;
+  etat_bebe?: 'vigoureux' | 'soins_intensifs' | 'reanimation' | 'decede' | string;
+  apgar_1min?: number;
+  apgar_5min?: number;
+  groupe_sanguin_bebe?: string;
+  complications_mere?: string;
+  complications_bebe?: string;
+  soins_neonatals?: string;
   medecin_nom?: string;
+  sage_femme_nom?: string;
+  observations?: string;
   created_at: string;
+  updated_at?: string;
 }
 
 // =============================================================================
